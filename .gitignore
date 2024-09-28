@@ -1,0 +1,12 @@
+__pycache__/
+.env
+venv
+app/logging/app.log
+
+yolov8n.pt
+yolov8s.pt
+yolov8m.pt
+yolov8l.pt
+yolov8x.pt
+app/routers/Tesseract-OCR/libtesseract-5.dll
+app/routers/ocr_model/craft_mlt_25k.pth
