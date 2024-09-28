@@ -23,7 +23,8 @@ templates = Jinja2Templates(directory="./app/templates")
 async def create_user( new_user: UserSchema,background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> UserOutSchema:
     try:
         hashed_password= get_password_hash(new_user.password)
-        new_user.password = hashed_password
+        new_user.password = hashed_password        
+        # new_user.username = new_user.first_name + " " + new_user.last_name
         created_user = User(**new_user.model_dump())
         db.add(created_user)
         db.commit()
@@ -37,7 +38,8 @@ async def create_user( new_user: UserSchema,background_tasks: BackgroundTasks, d
     except exc.IntegrityError as e:
         logger.error(e)
         db.rollback()  # Rollback the session to avoid transaction stuck
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account with this email already exists.")
+        # raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account with this email already exists.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/", status_code=200)

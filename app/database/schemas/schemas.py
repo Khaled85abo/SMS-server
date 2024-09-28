@@ -60,6 +60,7 @@ class UserOutSchema(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr = Field(..., min_length=1, max_length=50, description="Email has to be Unique and is required.")
+    username: str = Field(..., min_length=1, max_length=100)
     email_verified: bool
     # token_type: str  = Field(default=None)
     is_active: bool
@@ -71,7 +72,7 @@ class UserSchema(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr = Field(..., min_length=1, max_length=50, description="Email has to be Unique and is required.")
     password: str = Field(...)
-
+    username: str = Field(..., min_length=1, max_length=100)
 	# json_schema_extra gör så att vår swagger-dokumentation visar ett exempel
     model_config = ConfigDict(from_attributes=True, json_schema_extra={
         "example": {
