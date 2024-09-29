@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import update
 from app.db_setup import get_db
 from app.database.models.models import WorkSpace, UserWorkSpace, User
@@ -60,8 +60,25 @@ async def read_workspaces(
     db: Session = Depends(get_db),
     user: User = Depends(get_user)
 ):
-    workspaces = user.work_spaces[skip:skip + limit]
-    return workspaces
+    try:
+        # Query workspaces with user roles
+        workspaces_with_roles = db.query(WorkSpace, UserWorkSpace.role).join(
+            UserWorkSpace, 
+            (UserWorkSpace.work_space_id == WorkSpace.id) & (UserWorkSpace.user_id == user.id)
+        ).options(joinedload(WorkSpace.boxes)).offset(skip).limit(limit).all()
+
+        # Prepare the response
+        result = []
+        for workspace, role in workspaces_with_roles:
+            workspace_dict = workspace.__dict__
+            workspace_dict['role'] = role
+            workspace_dict['boxes'] = [box.__dict__ for box in workspace.boxes]
+            result.append(WorkSpaceOutSchema(**workspace_dict))
+
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # @router.get("/{workspace_id}", response_model=WorkSpaceOutSchema)
 # async def read_workspace(
@@ -140,52 +157,57 @@ async def update_workspace(
     db.refresh(db_workspace)
     return db_workspace
 
-@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_workspace(
-    workspace_id: int, 
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id)
-):
-    db_workspace = db.query(WorkSpace).join(UserWorkSpace).filter(
-        WorkSpace.id == workspace_id,
-        UserWorkSpace.user_id == user_id
-    ).first()
-    if db_workspace is None:
-        raise HTTPException(status_code=404, detail="WorkSpace not found")
-    db.delete(db_workspace)
-    db.commit()
-    return {"ok": True}
+# @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def delete_workspace(
+#     workspace_id: int, 
+#     db: Session = Depends(get_db),
+#     user_id: int = Depends(get_user_id)
+# ):
+#     db_workspace = db.query(WorkSpace).join(UserWorkSpace).filter(
+#         WorkSpace.id == workspace_id,
+#         UserWorkSpace.user_id == user_id
+#     ).first()
+#     if db_workspace is None:
+#         raise HTTPException(status_code=404, detail="WorkSpace not found")
+#     db.delete(db_workspace)
+#     db.commit()
+#     return {"ok": True}
 
 # Delete workspace for a single user
-@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def leave_workspace(
-    workspace_id: int,
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id)
-):
-    user_workspace = db.query(UserWorkSpace).filter(
-        UserWorkSpace.work_space_id == workspace_id,
-        UserWorkSpace.user_id == user_id
-    ).first()
-    if user_workspace is None:
-        raise HTTPException(status_code=404, detail="WorkSpace not found or not associated with the user")
-    db.delete(user_workspace)
-    db.commit()
-    return {"ok": True}
+# @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def leave_workspace(
+#     workspace_id: int,
+#     db: Session = Depends(get_db),
+#     user_id: int = Depends(get_user_id)
+# ):
+#     user_workspace = db.query(UserWorkSpace).filter(
+#         UserWorkSpace.work_space_id == workspace_id,
+#         UserWorkSpace.user_id == user_id
+#     ).first()
+#     if user_workspace is None:
+#         raise HTTPException(status_code=404, detail="WorkSpace not found or not associated with the user")
+#     db.delete(user_workspace)
+#     db.commit()
+#     return {"ok": True}
 
-# Allow deletrion only for owners
+# Allow deletion only for owners
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_workspace(
     workspace_id: int,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_user_id)
 ):
-    db_workspace = db.query(WorkSpace).filter(
+    # Fetch the workspace and join with UserWorkSpace to check ownership
+    workspace_with_user = db.query(WorkSpace).join(UserWorkSpace).filter(
         WorkSpace.id == workspace_id,
-        WorkSpace.owner_id == user_id
+        UserWorkSpace.user_id == user_id,
+        UserWorkSpace.role == "owner"
     ).first()
-    if db_workspace is None:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this workspace")
-    db.delete(db_workspace)
+
+    if workspace_with_user is None:
+        raise HTTPException(status_code=404, detail="Workspace not found or you're not authorized to delete it")
+    
+    # If we've reached this point, the workspace exists and the user is the owner
+    db.delete(workspace_with_user)
     db.commit()
     return {"ok": True}

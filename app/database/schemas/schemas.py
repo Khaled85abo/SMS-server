@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict,  EmailStr
 from typing import Optional
+from datetime import datetime
 
 class ItemSchema(BaseModel):
     name: str = Field(..., description="The name of the item")
@@ -51,6 +52,9 @@ class WorkSpaceSchema(BaseModel):
 
 class WorkSpaceOutSchema(WorkSpaceSchema):
     boxes: list[BoxOutSchema] = Field(..., description="The boxes of the work space")
+    created_date: datetime = Field(..., description="The created date of the work space")
+    updated_date: datetime | None = Field(..., description="The updated date of the work space")
+    role: str = Field(..., description="The role of the user in the work space")
     id: int
 
 
