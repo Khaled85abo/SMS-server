@@ -28,19 +28,19 @@ router = APIRouter()
     
 #     return db_workspace
 
-@router.post("/", response_model=WorkSpaceOutSchema)
+# @router.post("/", response_model=WorkSpaceOutSchema)
+@router.post("/")
 async def create_workspace(
     workspace: WorkSpaceSchema,
     db: Session = Depends(get_db),
     user: User = Depends(get_user)
-) -> WorkSpaceOutSchema:
+) :
     # Create the workspace and associate it with the user
     db_workspace = WorkSpace(**workspace.model_dump(exclude={"boxes"}))
     db_workspace.users.append(user)
     db.add(db_workspace)
     db.commit()
     db.refresh(db_workspace)
-
     return db_workspace
 
 # @router.get("/")
@@ -54,7 +54,7 @@ async def create_workspace(
 #     return workspaces
 
 @router.get("/", response_model=List[WorkSpaceOutSchema])
-async def read_workspaces(
+async def get_all_workspaces(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -95,18 +95,29 @@ async def read_workspaces(
 #     return workspace
 
 @router.get("/{workspace_id}", response_model=WorkSpaceOutSchema)
-async def read_workspace(
+async def get_single_workspace(
     workspace_id: int,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_user_id)
 ):
-    workspace = db.query(WorkSpace).filter(
-        WorkSpace.id == workspace_id,
-        WorkSpace.users.any(id=user_id)
-    ).first()
-    if workspace is None:
+    # Query the workspace and user role in a single query
+    workspace_with_role = db.query(WorkSpace, UserWorkSpace.role).join(
+        UserWorkSpace,
+        (UserWorkSpace.work_space_id == WorkSpace.id) & (UserWorkSpace.user_id == user_id)
+    ).filter(WorkSpace.id == workspace_id).first()
+
+    if workspace_with_role is None:
         raise HTTPException(status_code=404, detail="WorkSpace not found")
-    return workspace
+
+    workspace, role = workspace_with_role
+    
+    # Create a dictionary from the workspace object and add the role
+    workspace_dict = workspace.__dict__
+    workspace_dict['role'] = role
+    workspace_dict['boxes'] = [box.__dict__ for box in workspace.boxes]
+
+
+    return workspace_dict
 
 # @router.put("/{workspace_id}", response_model=WorkSpaceOutSchema)
 # async def update_workspace(
@@ -127,7 +138,7 @@ async def read_workspace(
 #     db.refresh(db_workspace)
 #     return db_workspace
 
-@router.put("/{workspace_id}", response_model=WorkSpaceOutSchema)
+@router.put("/{workspace_id}")
 async def update_workspace(
     workspace_id: int,
     workspace: WorkSpaceSchema,
