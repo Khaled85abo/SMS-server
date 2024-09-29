@@ -23,8 +23,9 @@ templates = Jinja2Templates(directory="./app/templates")
 async def create_user( new_user: UserSchema,background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> UserOutSchema:
     try:
         hashed_password= get_password_hash(new_user.password)
-        new_user.password = hashed_password        
-        # new_user.username = new_user.first_name + " " + new_user.last_name
+        new_user.password = hashed_password  
+        if not new_user.username:      
+            new_user.username = new_user.first_name + " " + new_user.last_name
         created_user = User(**new_user.model_dump())
         db.add(created_user)
         db.commit()

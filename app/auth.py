@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
+from sqlalchemy.orm import Session
+from app.db_setup import get_db
 from typing import Annotated
-
+from app.database.models.models import User
 from fastapi import Depends, FastAPI, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -11,7 +13,7 @@ from pydantic import BaseModel
 # openssl rand -hex 32
 SECRET_KEY = "09d25e094faa6ca2556c81816644vdf31vdfdf7099f6f0f4caa6hkjsdfd8d3e7"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 200
+ACCESS_TOKEN_EXPIRE_MINUTES = 20000
 
 router = APIRouter()
 
@@ -69,6 +71,12 @@ async def get_user_id(token: Annotated[str, Depends(oauth2_scheme)]) -> int:
     user_id = decode_token(token)
     return user_id
 
+async def get_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)) -> User:
+    user_id = decode_token(token)
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 # async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 #     credentials_exception = HTTPException(

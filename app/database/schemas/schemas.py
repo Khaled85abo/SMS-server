@@ -41,7 +41,6 @@ class BoxOutSchema(BoxSchema):
 class WorkSpaceSchema(BaseModel):
     name: str = Field(..., description="The name of the work space")
     description: str = Field(..., description="The description of the work space")
-    boxes: list[BoxSchema] = Field(..., description="The boxes of the work space")
 
     model_config = ConfigDict(from_attributes=True, json_schema_extra={
         "example": {
@@ -51,6 +50,7 @@ class WorkSpaceSchema(BaseModel):
     })  
 
 class WorkSpaceOutSchema(WorkSpaceSchema):
+    boxes: list[BoxOutSchema] = Field(..., description="The boxes of the work space")
     id: int
 
 

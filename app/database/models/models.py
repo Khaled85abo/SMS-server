@@ -74,7 +74,7 @@ class UserWorkSpace(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"), primary_key=True)
     work_space_id: Mapped[int] = mapped_column(ForeignKey("work_space.id", ondelete="CASCADE", onupdate="CASCADE"), primary_key=True)
-
+    role: Mapped[str] = mapped_column(Enum("owner", "admin", "viewer", name="role"), default="owner")
     __table_args__ = (
         UniqueConstraint("user_id", "work_space_id"),
     )
