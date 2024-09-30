@@ -14,6 +14,8 @@ import easyocr
 import numpy as np
 import os
 import base64
+import cv2
+
 router = APIRouter()
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,6 +33,9 @@ os.environ['EASYOCR_MODULE_PATH'] = MODEL_DIR
 model = YOLO('yolov8n.pt')
 model_8x = YOLO('yolov8x.pt')
 pytesseract.pytesseract.tesseract_cmd = tesseract_path
+
+# Load the YOLOv8s model for better small object detection
+model_small = YOLO('yolov8s.pt')
 
 @router.get("/")
 async def health_check():
@@ -231,3 +236,47 @@ print(f"EasyOCR models are stored in: {MODEL_DIR}")
 
 # Print the model download location
 print(f"EasyOCR models are stored in: {MODEL_DIR}")
+
+@router.post("/classify/")
+async def classify_small_objects(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        # Perform object detection
+        results = model_small(image)
+        
+        detected_objects = []
+        
+        for result in results:
+            boxes = result.boxes
+            for box in boxes:
+                try:
+                    x1, y1, x2, y2 = box.xyxy[0].tolist()
+                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                    
+                    class_id = int(box.cls)
+                    conf = float(box.conf)
+                    label = result.names[class_id]
+                    
+                    detected_objects.append({
+                        "class": label,
+                        "confidence": round(conf, 2),
+                        "bbox": [x1, y1, x2, y2]
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"Error processing box: {e}")
+                    continue
+        
+        # Sort objects by confidence (highest first)
+        detected_objects.sort(key=lambda x: x['confidence'], reverse=True)
+        
+        return JSONResponse(content={
+            "objects": detected_objects
+        })
+    
+    except Exception as e:
+        logger.error(f"Error in classify_small_objects: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

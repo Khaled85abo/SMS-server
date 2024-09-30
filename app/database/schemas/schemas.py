@@ -26,7 +26,6 @@ class BoxSchema(BaseModel):
     name: str = Field(..., description="The name of the box")
     description: str = Field(..., description="The description of the box")
     work_space_id: int = Field(..., description="The work space id of the box") #TODO: change to work space id
-    items: list[ItemSchema] = Field(..., description="The items of the box")
 
     model_config = ConfigDict(from_attributes=True, json_schema_extra={
         "example": {
@@ -37,6 +36,9 @@ class BoxSchema(BaseModel):
     })
 
 class BoxOutSchema(BoxSchema):
+    items: Optional[list[ItemOutSchema]] = Field(default=[], description="The items of the box")
+    created_date: datetime = Field(..., description="The created date of the work space")
+    updated_date: datetime | None = Field(None, description="The updated date of the work space")
     id: int
 
 class WorkSpaceSchema(BaseModel):

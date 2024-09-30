@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import update
 from app.db_setup import get_db
-from app.database.models.models import WorkSpace, UserWorkSpace, User
+from app.database.models.models import WorkSpace, UserWorkSpace, User, Box
 from app.database.schemas.schemas import WorkSpaceSchema, WorkSpaceOutSchema
 from app.auth import get_user_id, get_user
 
@@ -61,20 +60,24 @@ async def get_all_workspaces(
     user: User = Depends(get_user)
 ):
     try:
-        # Query workspaces with user roles
+        # Query workspaces with user roles and eagerly load boxes and items
         workspaces_with_roles = db.query(WorkSpace, UserWorkSpace.role).join(
             UserWorkSpace, 
             (UserWorkSpace.work_space_id == WorkSpace.id) & (UserWorkSpace.user_id == user.id)
-        ).options(joinedload(WorkSpace.boxes)).offset(skip).limit(limit).all()
+        ).options(
+            joinedload(WorkSpace.boxes).joinedload(Box.items)
+        ).offset(skip).limit(limit).all()
 
         # Prepare the response
         result = []
         for workspace, role in workspaces_with_roles:
             workspace_dict = workspace.__dict__
             workspace_dict['role'] = role
-            workspace_dict['boxes'] = [box.__dict__ for box in workspace.boxes]
+            workspace_dict['boxes'] = [
+                {**box.__dict__, 'items': [item.__dict__ for item in box.items]}
+                for box in workspace.boxes
+            ]
             result.append(WorkSpaceOutSchema(**workspace_dict))
-
 
         return result
     except Exception as e:

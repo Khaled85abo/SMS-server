@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.post("/", response_model=BoxOutSchema)
 async def create_box(box: BoxSchema, db: Session = Depends(get_db)):
-    db_box = Box(**box.dict(exclude={"items"}))
+    db_box = Box(**box.model_dump(exclude={"items"}))
     db.add(db_box)
     db.commit()
     db.refresh(db_box)
