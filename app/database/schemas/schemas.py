@@ -6,8 +6,7 @@ class ItemSchema(BaseModel):
     name: str = Field(..., description="The name of the item")
     description: str = Field(..., description="The description of the item")
     quantity: int = Field(..., description="The quantity of the item")
-    status: str = Field(..., description="The status of the item")
-    image: str = Field(..., description="The image of the item")
+    image: Optional[str] = Field(None, description="The image of the item")
     box_id: int = Field(..., description="The box id of the item")
     
     model_config = ConfigDict(from_attributes=True, json_schema_extra={
@@ -20,6 +19,7 @@ class ItemSchema(BaseModel):
     })
 
 class ItemOutSchema(ItemSchema):
+    status: str | None = Field(..., description="The status of the item")
     id: int
 
 class BoxSchema(BaseModel):
