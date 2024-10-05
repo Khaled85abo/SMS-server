@@ -48,7 +48,7 @@ def list_users(db: Session = Depends(get_db)):
     """
     Fetches all users
     """
-    result = db.scalars(select(User).options(selectinload(User.profile))).all()
+    result = db.scalars(select(User)).all()
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No users login credentials found")
     return result
@@ -56,7 +56,8 @@ def list_users(db: Session = Depends(get_db)):
 
 @router.get("/me")
 async def get_user(user_id: Annotated[int, Depends(get_user_id)], db: Session=Depends(get_db)) -> UserOutSchema:
-    user = db.scalars(select(User).where(User.id == user_id).options(selectinload(User.profile))).first()
+    user = db.scalars(select(User).where(User.id == user_id)).first()
+    print(user)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     return user

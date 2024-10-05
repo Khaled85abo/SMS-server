@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
 from app.db_setup import get_db
 from app.database.models.models import WorkSpace, UserWorkSpace, User, Box
@@ -7,6 +7,25 @@ from app.database.schemas.schemas import WorkSpaceSchema, WorkSpaceOutSchema
 from app.auth import get_user_id, get_user
 
 router = APIRouter()
+
+def get_workspaces_with_roles(db: Session, user_id: int, workspace_id: Optional[int] = None, skip: int = 0, limit: int = 100, include_items: bool = False):
+    query = db.query(WorkSpace, UserWorkSpace.role).join(
+        UserWorkSpace, 
+        (UserWorkSpace.work_space_id == WorkSpace.id) & (UserWorkSpace.user_id == user_id)
+    )
+
+    if include_items:
+        query = query.options(joinedload(WorkSpace.boxes).joinedload(Box.items))
+    else:
+        query = query.options(joinedload(WorkSpace.boxes))
+
+    if workspace_id is not None:
+        query = query.filter(WorkSpace.id == workspace_id)
+    else:
+        query = query.offset(skip).limit(limit)
+
+    return query.all()
+
 
 # @router.post("/", response_model=WorkSpaceOutSchema)
 # async def create_workspace(
@@ -107,7 +126,9 @@ async def get_single_workspace(
     workspace_with_role = db.query(WorkSpace, UserWorkSpace.role).join(
         UserWorkSpace,
         (UserWorkSpace.work_space_id == WorkSpace.id) & (UserWorkSpace.user_id == user_id)
-    ).filter(WorkSpace.id == workspace_id).first()
+    ).options(
+            joinedload(WorkSpace.boxes).joinedload(Box.items)
+        ).filter(WorkSpace.id == workspace_id).first()
 
     if workspace_with_role is None:
         raise HTTPException(status_code=404, detail="WorkSpace not found")
@@ -117,7 +138,9 @@ async def get_single_workspace(
     # Create a dictionary from the workspace object and add the role
     workspace_dict = workspace.__dict__
     workspace_dict['role'] = role
-    workspace_dict['boxes'] = [box.__dict__ for box in workspace.boxes]
+    workspace_dict['boxes'] = [
+    {**box.__dict__, 'items': [item.__dict__ for item in box.items]}
+    for box in workspace.boxes]
 
 
     return workspace_dict
