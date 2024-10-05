@@ -37,9 +37,6 @@ pytesseract.pytesseract.tesseract_cmd = tesseract_path
 # Load the YOLOv8s model for better small object detection
 model_small = YOLO('yolov8s.pt')
 
-@router.get("/")
-async def health_check():
-    return {"message": "Welcome to the Object Detection API"}
 
 @router.post("/detect/")
 async def detect_objects(file: UploadFile = File(...), model = model):
@@ -196,7 +193,7 @@ async def detect_objects_img(file: UploadFile = File(...), model = model):
 reader = easyocr.Reader(['en'], model_storage_directory=MODEL_DIR, download_enabled=True)
 
 @router.post("/ocr/")
-async def perform_ocr(file: UploadFile = File(...)):
+async def perform_ocr(file: UploadFile = File(...), line_level: bool = False):
     try:
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
@@ -205,15 +202,28 @@ async def perform_ocr(file: UploadFile = File(...)):
         image_np = np.array(image)
         
         # Perform OCR
-        result = reader.readtext(image_np)
+        result = reader.readtext(image_np, paragraph=line_level)
         
         # Extract text from results
         text = ' '.join([item[1] for item in result])
         
-        return JSONResponse(content={"text": text})
+        # Convert numpy types to Python native types
+        processed_result = [
+            {
+                "bbox": [[float(coord) for coord in point] for point in item[0]],
+                "text": item[1],
+                "confidence": float(item[2])
+            } for item in result
+        ]
+        
+        return JSONResponse(content={
+            "text": text, 
+            "result": processed_result,
+            "line_level": line_level
+        })
     
     except Exception as e:
-        print(f"Error in perform_ocr: {e}")
+        logger.error(f"Error in perform_ocr: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/ocr-light/")
