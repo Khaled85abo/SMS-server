@@ -291,7 +291,7 @@ async def classify_small_objects(file: UploadFile = File(...)):
         logger.error(f"Error in classify_small_objects: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/detect-box-names/")
+@router.post("/detect-box-name/")
 async def detect_box_names(
     file: UploadFile = File(...),
     min_size: int = 20,
