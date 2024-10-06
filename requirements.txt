@@ -29,7 +29,7 @@ filelock==3.16.0
 flatbuffers==24.3.25
 fonttools==4.53.1
 fsspec==2024.9.0
-gast<=0.4.0
+gast==0.6.0
 google-pasta==0.2.0
 greenlet==3.0.3
 grpcio==1.66.1
@@ -44,7 +44,7 @@ imgaug==0.4.0
 isodate==0.6.1
 itsdangerous==2.1.2
 Jinja2==3.1.4
-keras>=2.11.0,<2.12
+keras==3.5.0
 Keras-Applications==1.0.8
 keras-ocr==0.9.3
 kiwisolver==1.4.7
@@ -112,7 +112,7 @@ starlette==0.38.5
 sympy==1.13.2
 tensorboard==2.17.1
 tensorboard-data-server==0.7.2
-tensorflow==2.11.0
+tensorflow==2.17.0
 tensorflow-io-gcs-filesystem==0.31.0
 termcolor==2.4.0
 tifffile==2024.8.30
