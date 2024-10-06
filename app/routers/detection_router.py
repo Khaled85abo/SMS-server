@@ -290,3 +290,125 @@ async def classify_small_objects(file: UploadFile = File(...)):
     except Exception as e:
         logger.error(f"Error in classify_small_objects: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/detect-box-names/")
+async def detect_box_names(
+    file: UploadFile = File(...),
+    min_size: int = 20,
+    text_threshold: float = 0.7,
+    low_text: float = 0.4,
+    link_threshold: float = 0.4,
+    canvas_size: int = 2560,
+    mag_ratio: float = 1.0,
+    slope_ths: float = 0.2,
+    ycenter_ths: float = 0.5,
+    height_ths: float = 0.5,
+    width_ths: float = 0.3,
+    add_margin: float = 0.1,
+):
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
+        
+        # Convert PIL Image to numpy array
+        image_np = np.array(image)
+        
+        # Perform OCR with optimized parameters
+        result = reader.readtext(
+            image_np,
+            paragraph=False,
+            min_size=min_size,
+            text_threshold=text_threshold,
+            low_text=low_text,
+            link_threshold=link_threshold,
+            canvas_size=canvas_size,
+            mag_ratio=mag_ratio,
+            slope_ths=slope_ths,
+            ycenter_ths=ycenter_ths,
+            height_ths=height_ths,
+            width_ths=width_ths,
+            add_margin=add_margin,
+        )
+        
+        # Process results to combine closely spaced text and exclude short results
+        processed_result = []
+        for i, item in enumerate(result):
+            if i > 0 and is_close(item[0], result[i-1][0]):
+                # Combine with previous item
+                prev = processed_result[-1]
+                prev["text"] += " " + item[1]
+                prev["bbox"][1] = item[0][1]  # Update top-right
+                prev["bbox"][2] = item[0][2]  # Update bottom-right
+                prev["confidence"] = (prev["confidence"] + float(item[2])) / 2
+            else:
+                # Add as new item if it has at least 3 non-space characters
+                if len(''.join(item[1].split())) >= 3:
+                    processed_result.append({
+                        "bbox": [[float(coord) for coord in point] for point in item[0]],
+                        "text": item[1],
+                        "confidence": float(item[2])
+                    })
+        
+        # Final filter to ensure all results have at least 3 non-space characters
+        final_result = [item for item in processed_result if len(''.join(item["text"].split())) >= 3]
+        
+        # Create a dictionary with box names as keys
+        box_dict = {}
+        errors = []
+        for item in final_result:
+            box_name = item["text"].strip()
+            if box_name in box_dict:
+                errors.append(f"Duplicate box name detected: {box_name}")
+            else:
+                box_dict[box_name] = {
+                    "bbox": item["bbox"],
+                    "confidence": item["confidence"],
+                    "text": item["text"]
+                }
+        
+        return JSONResponse(content={
+            "result": final_result,
+            "boxes": box_dict,
+            "errors": errors,
+            "parameters": {
+                "min_size": min_size,
+                "text_threshold": text_threshold,
+                "low_text": low_text,
+                "link_threshold": link_threshold,
+                "canvas_size": canvas_size,
+                "mag_ratio": mag_ratio,
+                "slope_ths": slope_ths,
+                "ycenter_ths": ycenter_ths,
+                "height_ths": height_ths,
+                "width_ths": width_ths,
+                "add_margin": add_margin,
+            }
+        })
+    
+    except Exception as e:
+        logger.error(f"Error in detect_box_names: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def is_close(bbox1, bbox2, threshold=0.1):
+    """Check if two bounding boxes are close to each other."""
+    x1, y1 = bbox1[0]
+    x2, y2 = bbox2[1]
+    width = max(bbox1[1][0], bbox2[1][0]) - min(bbox1[0][0], bbox2[0][0])
+    height = max(bbox1[2][1], bbox2[2][1]) - min(bbox1[0][1], bbox2[0][1])
+    return abs(x2 - x1) < width * threshold and abs(y2 - y1) < height * threshold
+
+def is_close(bbox1, bbox2, threshold=0.1):
+    """Check if two bounding boxes are close to each other."""
+    x1, y1 = bbox1[0]
+    x2, y2 = bbox2[1]
+    width = max(bbox1[1][0], bbox2[1][0]) - min(bbox1[0][0], bbox2[0][0])
+    height = max(bbox1[2][1], bbox2[2][1]) - min(bbox1[0][1], bbox2[0][1])
+    return abs(x2 - x1) < width * threshold and abs(y2 - y1) < height * threshold
+
+def is_close(bbox1, bbox2, threshold=0.1):
+    """Check if two bounding boxes are close to each other."""
+    x1, y1 = bbox1[0]
+    x2, y2 = bbox2[1]
+    width = max(bbox1[1][0], bbox2[1][0]) - min(bbox1[0][0], bbox2[0][0])
+    height = max(bbox1[2][1], bbox2[2][1]) - min(bbox1[0][1], bbox2[0][1])
+    return abs(x2 - x1) < width * threshold and abs(y2 - y1) < height * threshold
