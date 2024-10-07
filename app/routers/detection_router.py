@@ -277,7 +277,8 @@ async def classify_small_objects(file: UploadFile = File(...)):
                     
                     # Encode the cropped image to base64 with data URI prefix
                     _, buffer = cv2.imencode('.png', cropped_img)
-                    img_base64 = f"data:image/png;base64,{base64.b64encode(buffer).decode('utf-8')}"
+                    # img_base64 = f"data:image/png;base64,{base64.b64encode(buffer).decode('utf-8')}"
+                    img_base64 = base64.b64encode(buffer).decode('utf-8')
                     
                     item = {
                         "bbox": [[x1, y1], [x2, y1], [x2, y2], [x1, y2]],
