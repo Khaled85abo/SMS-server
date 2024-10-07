@@ -112,11 +112,12 @@ async def create_item(
 async def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     items = db.query(Item).options(joinedload(Item.images)).offset(skip).limit(limit).all()
     
-    # Convert items to dictionaries and include image URLs
+    # Convert items to dictionaries and include image objects
     items_with_images = []
     for item in items:
         item_dict = item.__dict__
-        item_dict['images'] = [image.url for image in item.images]
+        item_dict['images'] = [{"id": image.id, "url": image.url} for image in item.images]
+        item_dict.pop('_sa_instance_state', None)
         items_with_images.append(item_dict)
     
     return items_with_images
@@ -127,14 +128,15 @@ async def read_item(item_id: int, db: Session = Depends(get_db)):
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
     
-    # Convert item to dictionary and include image URLs
+    # Convert item to dictionary
     item_dict = item.__dict__
-    item_dict['images'] = [image.url for image in item.images]
+    
+    # Format images as an array of objects with id and url
+    item_dict['images'] = [{"id": image.id, "url": image.url} for image in item.images]
     
     # Remove the _sa_instance_state key
     # item_dict.pop('_sa_instance_state', None)
     
-    # return JSONResponse(content=item_dict)
     return item_dict
 
 @router.put("/{item_id}", response_model=ItemOutSchema)
