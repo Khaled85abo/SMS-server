@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.db_setup import get_db
 from app.database.models.models import Item, ItemImage
 from app.database.schemas.schemas import ItemSchema, ItemOutSchema
@@ -9,6 +9,7 @@ import base64
 from io import BytesIO
 from uuid import uuid4
 from typing import Annotated  # Add this import
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
@@ -109,22 +110,39 @@ async def create_item(
 
 @router.get("/")
 async def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    items = db.query(Item).offset(skip).limit(limit).all()
-    return items
+    items = db.query(Item).options(joinedload(Item.images)).offset(skip).limit(limit).all()
+    
+    # Convert items to dictionaries and include image URLs
+    items_with_images = []
+    for item in items:
+        item_dict = item.__dict__
+        item_dict['images'] = [image.url for image in item.images]
+        items_with_images.append(item_dict)
+    
+    return items_with_images
 
-@router.get("/{item_id}", response_model=ItemOutSchema)
+@router.get("/{item_id}")
 async def read_item(item_id: int, db: Session = Depends(get_db)):
-    item = db.query(Item).filter(Item.id == item_id).first()
+    item = db.query(Item).options(joinedload(Item.images)).filter(Item.id == item_id).first()
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    return item
+    
+    # Convert item to dictionary and include image URLs
+    item_dict = item.__dict__
+    item_dict['images'] = [image.url for image in item.images]
+    
+    # Remove the _sa_instance_state key
+    # item_dict.pop('_sa_instance_state', None)
+    
+    # return JSONResponse(content=item_dict)
+    return item_dict
 
 @router.put("/{item_id}", response_model=ItemOutSchema)
 async def update_item(item_id: int, item: ItemSchema, db: Session = Depends(get_db)):
     db_item = db.query(Item).filter(Item.id == item_id).first()
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    for key, value in item.dict().items():
+    for key, value in item.model_dump(exclude={'image'}).items():
         setattr(db_item, key, value)
     db.commit()
     db.refresh(db_item)

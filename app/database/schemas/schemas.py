@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict,  EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class ItemSchema(BaseModel):
@@ -104,3 +104,21 @@ class ResetPasswordRequestScheam(BaseModel):
 
 class ResetPasswordSchema(BaseModel):
     password: str
+
+class ImageSchema(BaseModel):
+    id: int
+    url: str
+
+class ItemWithImagesSchema(BaseModel):
+    id: int
+    name: str
+    description: str
+    images: List[ImageSchema]
+
+class BoxWithItemsAndImagesSchema(BaseModel):
+    id: int
+    name: str
+    items: List[ItemWithImagesSchema]
+
+    class Config:
+        orm_mode = True
