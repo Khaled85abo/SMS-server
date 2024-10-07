@@ -272,10 +272,18 @@ async def classify_small_objects(file: UploadFile = File(...)):
                     conf = float(box.conf)
                     label = result.names[class_id]
                     
+                    # Crop the image to the bounding box
+                    cropped_img = image[y1:y2, x1:x2]
+                    
+                    # Encode the cropped image to base64
+                    _, buffer = cv2.imencode('.png', cropped_img)
+                    img_base64 = base64.b64encode(buffer).decode('utf-8')
+                    
                     item = {
                         "bbox": [[x1, y1], [x2, y1], [x2, y2], [x1, y2]],
                         "confidence": round(conf, 2),
-                        "text": label
+                        "text": label,
+                        "image": img_base64
                     }
                     
                     detected_objects.append(item)
@@ -284,11 +292,13 @@ async def classify_small_objects(file: UploadFile = File(...)):
                     if label in items_dict:
                         items_dict[label]["quantity"] += 1
                         items_dict[label]["bboxes"].append(item["bbox"])
+                        items_dict[label]["images"].append(img_base64)
                     else:
                         items_dict[label] = {
                             "confidence": item["confidence"],
                             "quantity": 1,
-                            "bboxes": [item["bbox"]]
+                            "bboxes": [item["bbox"]],
+                            "images": [img_base64]
                         }
                     
                 except Exception as e:
