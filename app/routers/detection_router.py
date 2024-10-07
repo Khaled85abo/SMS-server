@@ -258,6 +258,8 @@ async def classify_small_objects(file: UploadFile = File(...)):
         results = model_small(image)
         
         detected_objects = []
+        items_dict = {}
+        errors = []
         
         for result in results:
             boxes = result.boxes
@@ -270,11 +272,24 @@ async def classify_small_objects(file: UploadFile = File(...)):
                     conf = float(box.conf)
                     label = result.names[class_id]
                     
-                    detected_objects.append({
-                        "class": label,
+                    item = {
+                        "bbox": [[x1, y1], [x2, y1], [x2, y2], [x1, y2]],
                         "confidence": round(conf, 2),
-                        "bbox": [x1, y1, x2, y2]
-                    })
+                        "text": label
+                    }
+                    
+                    detected_objects.append(item)
+                    
+                    # Update items_dict
+                    if label in items_dict:
+                        items_dict[label]["quantity"] += 1
+                        items_dict[label]["bboxes"].append(item["bbox"])
+                    else:
+                        items_dict[label] = {
+                            "confidence": item["confidence"],
+                            "quantity": 1,
+                            "bboxes": [item["bbox"]]
+                        }
                     
                 except Exception as e:
                     logger.error(f"Error processing box: {e}")
@@ -284,7 +299,12 @@ async def classify_small_objects(file: UploadFile = File(...)):
         detected_objects.sort(key=lambda x: x['confidence'], reverse=True)
         
         return JSONResponse(content={
-            "objects": detected_objects
+            "result": detected_objects,
+            "items": items_dict,
+            "errors": errors,
+            "parameters": {
+                "model": "YOLOv8s"
+            }
         })
     
     except Exception as e:
