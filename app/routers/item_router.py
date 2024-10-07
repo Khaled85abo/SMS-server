@@ -1,15 +1,48 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
 from sqlalchemy.orm import Session
 from app.db_setup import get_db
-from app.database.models.models import Item
+from app.database.models.models import Item, ItemImage
 from app.database.schemas.schemas import ItemSchema, ItemOutSchema
+from app.routers.image_router import upload_image
+import base64
+from io import BytesIO
+from uuid import uuid4
 
 router = APIRouter()
 
 @router.post("/", response_model=ItemOutSchema)
 async def create_item(item: ItemSchema, db: Session = Depends(get_db)):
-    db_item = Item(**item.dict())
+    # Create the item
+    db_item = Item(**item.dict(exclude={'image'}))
     db.add(db_item)
+    db.flush()  # Flush to get the item_id
+
+    # Handle image upload if present
+    if item.image:
+        try:
+            # Decode base64 image
+            image_data = base64.b64decode(item.image)
+            
+            # Generate a unique filename
+            file_extension = "png"  # You might want to determine this dynamically
+            unique_filename = f"{uuid4()}.{file_extension}"
+            
+            # Create an UploadFile object with the unique filename
+            file = UploadFile(filename=unique_filename, file=BytesIO(image_data))
+            
+            # Use the upload_image function
+            image_url = await upload_image(file)
+            
+            # Create ItemImage record
+            db_image = ItemImage(url=image_url, item_id=db_item.id)
+            db.add(db_image)
+        
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                                detail=f"Error processing image: {str(e)}")
+
+    # Commit the transaction
     db.commit()
     db.refresh(db_item)
     return db_item
