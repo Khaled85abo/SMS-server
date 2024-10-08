@@ -174,7 +174,8 @@ async def update_workspace(
     # First, check if the workspace exists and is associated with the user
     db_workspace = db.query(WorkSpace).join(UserWorkSpace).filter(
         WorkSpace.id == workspace_id,
-        UserWorkSpace.user_id == user_id
+        UserWorkSpace.user_id == user_id, 
+        UserWorkSpace.role == "owner" or UserWorkSpace.role == "admin"
     ).first()
     
     if db_workspace is None:
