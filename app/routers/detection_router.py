@@ -258,6 +258,8 @@ async def classify_small_objects(file: UploadFile = File(...)):
         results = model_small(image)
         
         detected_objects = []
+        items_dict = {}
+        errors = []
         
         for result in results:
             boxes = result.boxes
@@ -270,11 +272,35 @@ async def classify_small_objects(file: UploadFile = File(...)):
                     conf = float(box.conf)
                     label = result.names[class_id]
                     
-                    detected_objects.append({
-                        "class": label,
+                    # Crop the image to the bounding box
+                    cropped_img = image[y1:y2, x1:x2]
+                    
+                    # Encode the cropped image to base64 with data URI prefix
+                    _, buffer = cv2.imencode('.png', cropped_img)
+                    # img_base64 = f"data:image/png;base64,{base64.b64encode(buffer).decode('utf-8')}"
+                    img_base64 = base64.b64encode(buffer).decode('utf-8')
+                    
+                    item = {
+                        "bbox": [[x1, y1], [x2, y1], [x2, y2], [x1, y2]],
                         "confidence": round(conf, 2),
-                        "bbox": [x1, y1, x2, y2]
-                    })
+                        "text": label,
+                        "image": img_base64
+                    }
+                    
+                    detected_objects.append(item)
+                    
+                    # Update items_dict
+                    if label in items_dict:
+                        items_dict[label]["quantity"] += 1
+                        items_dict[label]["bboxes"].append(item["bbox"])
+                        items_dict[label]["images"].append(img_base64)
+                    else:
+                        items_dict[label] = {
+                            "confidence": item["confidence"],
+                            "quantity": 1,
+                            "bboxes": [item["bbox"]],
+                            "images": [img_base64]
+                        }
                     
                 except Exception as e:
                     logger.error(f"Error processing box: {e}")
@@ -284,7 +310,12 @@ async def classify_small_objects(file: UploadFile = File(...)):
         detected_objects.sort(key=lambda x: x['confidence'], reverse=True)
         
         return JSONResponse(content={
-            "objects": detected_objects
+            "result": detected_objects,
+            "items": items_dict,
+            "errors": errors,
+            "parameters": {
+                "model": "YOLOv8s"
+            }
         })
     
     except Exception as e:

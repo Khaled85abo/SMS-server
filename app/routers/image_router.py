@@ -35,7 +35,7 @@ async def upload_image(file: UploadFile,  user_id: Annotated[int, Depends(get_us
     contents = await file.read()
     with open(f"{IMAGEDIR}{file.filename}", "wb") as f:
         f.write(contents)
-    return {"imageURL: ": f"{IMAGEDIR}{file.filename}", "user Id": user_id}
+    return {"imageURL": f"{IMAGEDIR}{file.filename}", "user_id": user_id}
 
 
 
