@@ -8,5 +8,10 @@ yolov8s.pt
 yolov8m.pt
 yolov8l.pt
 yolov8x.pt
+yolov11n.pt
+yolov11s.pt
+yolov11m.pt
+yolov11l.pt
+yolov11x.pt
 app/routers/Tesseract-OCR/libtesseract-5.dll
 app/routers/ocr_model/craft_mlt_25k.pth
