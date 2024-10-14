@@ -29,11 +29,11 @@ client = weaviate.connect_to_weaviate_cloud(
 # )
 
 
-def get_items_collection():
-    return client.collections.get("Item")
+# def get_items_collection():
+#     return client.collections.get("Item")
 
-def get_manuals_collection():
-    return client.collections.get("Manual")
+# def get_manuals_collection():
+#     return client.collections.get("Manual")
 
 def create_weaviate_manuals():
     try:

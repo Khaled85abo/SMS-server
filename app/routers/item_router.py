@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session, joinedload
 from app.db_setup import get_db
-from app.database.models.models import Item, ItemImage
+from app.database.models.models import Item, ItemImage, Box
 from app.database.schemas.schemas import ItemSchema, ItemOutSchema
 from app.routers.image_router import upload_image
 from app.auth import get_user_id  # Add this import
@@ -108,19 +108,41 @@ async def create_item(
     db.refresh(db_item)
     return db_item
 
+# @router.get("/")
+# async def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+#     items = db.query(Item).options(joinedload(Item.images)).offset(skip).limit(limit).all()
+    
+#     # Convert items to dictionaries and include image objects
+#     items_with_images = []
+#     for item in items:
+#         item_dict = item.__dict__
+#         item_dict['images'] = [{"id": image.id, "url": image.url} for image in item.images]
+#         item_dict['box'] = item.box.name if item.box else None
+#         item_dict['workspace'] = item.box.work_space.name if item.box and item.box.work_space else None
+#         item_dict.pop('_sa_instance_state', None)
+#         items_with_images.append(item_dict)
+    
+#     return items_with_images
+
 @router.get("/")
 async def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    items = db.query(Item).options(joinedload(Item.images)).offset(skip).limit(limit).all()
+    items = db.query(Item).options(joinedload(Item.images), joinedload(Item.box).joinedload(Box.work_space)).offset(skip).limit(limit).all()
     
-    # Convert items to dictionaries and include image objects
-    items_with_images = []
+    items_with_images_and_workspace = []
     for item in items:
-        item_dict = item.__dict__
-        item_dict['images'] = [{"id": image.id, "url": image.url} for image in item.images]
-        item_dict.pop('_sa_instance_state', None)
-        items_with_images.append(item_dict)
-    
-    return items_with_images
+        item_dict = {
+            'id': item.id,
+            'name': item.name,
+            'quantity': item.quantity,
+            'description': item.description,
+            'status': item.status,
+            'images': [{'id': image.id, 'url': image.url} for image in item.images],
+            'box': item.box.name if item.box else None,
+            'workspace': item.box.work_space.name if item.box and item.box.work_space else None
+        }
+        items_with_images_and_workspace.append(item_dict)
+
+    return items_with_images_and_workspace
 
 @router.get("/{item_id}")
 async def read_item(item_id: int, db: Session = Depends(get_db)):
