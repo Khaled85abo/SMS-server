@@ -45,7 +45,7 @@ def create_weaviate_manuals():
             properties=[
                 wc.Property(name="manual_id", data_type=wc.DataType.TEXT, skip_vectorization=True),
                 wc.Property(name="content", data_type=wc.DataType.TEXT),
-                wc.Property(name="type", data_type=wc.DataType.TEXT),
+                wc.Property(name="type", data_type=wc.DataType.TEXT , skip_vectorization=True),
                 wc.Property(name="workspace", data_type=wc.DataType.TEXT, skip_vectorization=True),
             ],
             vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(),
@@ -91,8 +91,11 @@ def find_object_uuid(collection, db_id):
         # If we found a matching object, update it
         uuid = result[0].uuid
         print(f"UUID for {db_id}: {uuid}")
+        return uuid
     else:
         print(f"No data found for item_id: {db_id}")
+        return None
+
 
 
 # Adding an item
@@ -116,12 +119,24 @@ def delete_item_from_weaviate(collection, item_id):
     collection.data.delete_by_id(uuid=item_id)
 
 
-def search_item_by_keyword(collection, keyword):
+def keyword_items_search(collection, keyword, workspace):
     response = collection.query.bm25(
         query=keyword,
         limit=10,
+        filters=Filter.by_property("workspace").equal(workspace)
     )
+    return response
 
+def semantic_items_search(collection, query, workspace, limit=5):
+    response = collection.query.near_text(
+        query=query,
+        limit=limit,
+        filters=Filter.by_property("workspace").equal(workspace)
+    )
+    return response
+
+
+def get_item_details(response):
     for obj in response.objects:
         # Accessing UUID
         uuid = obj.uuid
