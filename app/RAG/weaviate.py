@@ -31,16 +31,19 @@ client = weaviate.connect_to_weaviate_cloud(
 #     return client
 
 
-def init_weaviate():
-    # create_weaviate_manuals()
-    create_weaviate_items()
+async def init_weaviate():
+    # await create_weaviate_manual_collection()
+    await create_weaviate_item_collection()
 
 
 def insert_manuals_to_weaviate(manuals_collection):
     pass
 
-def insert_items_to_weaviate(items_collection):
-    items_db = get_items()
+async def insert_items_to_weaviate(items_collection):
+    print("inserting items to weaviate")
+    print(items_collection)
+    items_db =await get_items()
+    print(items_db)
     with items_collection.batch.dynamic() as batch:
         for item in items_db:
             batch.add_object(
@@ -56,13 +59,13 @@ def insert_items_to_weaviate(items_collection):
 
 
 
-def get_items_collection(client):
+def get_items_collection():
     return client.collections.get("Item")
 
-def get_manuals_collection(client):
+def get_manuals_collection():
     return client.collections.get("Manual")
 
-def create_weaviate_manuals():
+async def create_weaviate_manual_collection():
     try:
         manuals = client.collections.get("Manual")
         print(manuals.config.get(simple=False))
@@ -82,9 +85,9 @@ def create_weaviate_manuals():
             ),
         )
         print(manuals.config.get(simple=False))
-        insert_manuals_to_weaviate(manuals_collection=manuals)
+        await insert_manuals_to_weaviate(manuals_collection=manuals)
 
-def create_weaviate_items():
+async def create_weaviate_item_collection():
     # Check if 'Item' class exists
     try:
         items =client.collections.get("Item")
@@ -106,11 +109,11 @@ def create_weaviate_items():
                 distance_metric=wc.VectorDistances.COSINE,
             ),
         )
-        insert_items_to_weaviate(items_collection=items)
+        await insert_items_to_weaviate(items_collection=items)
 
 
 
-def find_object_uuid(collection, db_id):
+def find_item_uuid(collection, db_id):
     results = collection.query.fetch_objects(
         filters=Filter.by_property("item_id").equal(db_id)
     )
@@ -128,7 +131,7 @@ def find_object_uuid(collection, db_id):
 
 
 # Adding an item
-def create_item(collection, properties):
+def add_data(collection, properties):
     collection.data.insert(
         properties= properties,
     )
@@ -143,9 +146,8 @@ def update_data(collection,uuid, properties):
 
     )
 
-
-def delete_item_from_weaviate(collection, item_id):
-    collection.data.delete_by_id(uuid=item_id)
+def delete_data(collection, uuid):
+    collection.data.delete_by_id(uuid=uuid)
 
 
 def keyword_items_search(collection, keyword, workspace):

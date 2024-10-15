@@ -13,9 +13,11 @@ from app.logging.logger import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    # init_weaviate()
+    await init_weaviate()
     yield
     close_client()
+
+
 
 origins = [
     "http://localhost:3000",
@@ -38,5 +40,5 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(v1_router, prefix="/v1")
-init_weaviate()
+# init_weaviate()
 
