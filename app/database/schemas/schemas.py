@@ -8,6 +8,8 @@ class ItemSchema(BaseModel):
     quantity: int = Field(..., description="The quantity of the item")
     image: Optional[str] = Field(None, description="The image of the item")
     box_id: int = Field(..., description="The box id of the item")
+    box: Optional[str] = Field(None, description="The box of the item")
+    workspace: Optional[str] = Field(None, description="The workspace of the item")
     
     model_config = ConfigDict(from_attributes=True, json_schema_extra={
         "example": {

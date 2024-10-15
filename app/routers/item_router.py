@@ -4,12 +4,13 @@ from app.db_setup import get_db
 from app.database.models.models import Item, ItemImage, Box
 from app.database.schemas.schemas import ItemSchema, ItemOutSchema
 from app.routers.image_router import upload_image
-from app.auth import get_user_id  # Add this import
+from app.auth import get_user_id
 import base64
 from io import BytesIO
 from uuid import uuid4
-from typing import Annotated  # Add this import
+from typing import Annotated
 from fastapi.responses import JSONResponse
+from app.RAG.weaviate import client, get_items_collection, add_data, update_data, delete_data, find_item_uuid
 
 router = APIRouter()
 
@@ -70,7 +71,9 @@ async def create_item(
     user_id: Annotated[int, Depends(get_user_id)],
     db: Session = Depends(get_db)
 ):
-    # Create the item
+    # Create the item in the database
+    box = item.box
+    workspace = item.workspace
     db_item = Item(**item.model_dump(exclude={'image'}))
     db.add(db_item)
     db.flush()  # Flush to get the item_id
@@ -106,6 +109,17 @@ async def create_item(
     # Commit the transaction
     db.commit()
     db.refresh(db_item)
+
+    # Add the item to Weaviate
+    items_collection = get_items_collection()
+    add_data(collection= items_collection, properties={
+        "item_id": db_item.id,
+        "name": db_item.name,
+        "description": db_item.description,
+        "box": box,
+        "workspace": workspace
+    })
+
     return db_item
 
 # @router.get("/")
@@ -166,10 +180,22 @@ async def update_item(item_id: int, item: ItemSchema, db: Session = Depends(get_
     db_item = db.query(Item).filter(Item.id == item_id).first()
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Update the item in the database
     for key, value in item.model_dump(exclude={'image'}).items():
         setattr(db_item, key, value)
     db.commit()
     db.refresh(db_item)
+
+    # Update the item in Weaviate
+    items_collection = get_items_collection()
+    uuid = find_item_uuid(items_collection, item_id)
+    if uuid:
+        update_data(items_collection, uuid, {
+            "name": db_item.name,
+            "description": db_item.description,
+        })
+
     return db_item
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -177,6 +203,15 @@ async def delete_item(item_id: int, db: Session = Depends(get_db)):
     db_item = db.query(Item).filter(Item.id == item_id).first()
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Delete the item from the database
     db.delete(db_item)
     db.commit()
+
+    # Delete the item from Weaviate
+    items_collection = get_items_collection(client)
+    uuid = find_item_uuid(items_collection, item_id)
+    if uuid:
+        delete_data(items_collection, uuid)
+
     return {"ok": True}
