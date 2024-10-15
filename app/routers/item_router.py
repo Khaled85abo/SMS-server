@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session, joinedload
 from app.db_setup import get_db
 from app.database.models.models import Item, ItemImage, Box
-from app.database.schemas.schemas import ItemSchema, ItemOutSchema
+from app.database.schemas.schemas import ItemPOSTSchema,ItemPUTSchema, ItemOutSchema
 from app.routers.image_router import upload_image
 from app.auth import get_user_id
 import base64
@@ -67,7 +67,7 @@ router = APIRouter()
 
 @router.post("/", response_model=ItemOutSchema)
 async def create_item(
-    item: ItemSchema, 
+    item: ItemPOSTSchema, 
     user_id: Annotated[int, Depends(get_user_id)],
     db: Session = Depends(get_db)
 ):
@@ -180,14 +180,15 @@ async def read_item(item_id: int, db: Session = Depends(get_db)):
     return item_dict
 
 @router.put("/{item_id}", response_model=ItemOutSchema)
-async def update_item(item_id: int, item: ItemSchema, db: Session = Depends(get_db)):
+async def update_item(item_id: int, item: ItemPUTSchema, db: Session = Depends(get_db)):
     db_item = db.query(Item).filter(Item.id == item_id).first()
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
     
     # Update the item in the database
     for key, value in item.model_dump(exclude={'image'}).items():
-        setattr(db_item, key, value)
+        if value is not None:
+            setattr(db_item, key, value)
     db.commit()
     db.refresh(db_item)
 
@@ -213,7 +214,7 @@ async def delete_item(item_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     # Delete the item from Weaviate
-    items_collection = get_items_collection(client)
+    items_collection = get_items_collection()
     uuid = find_item_uuid(items_collection, item_id)
     if uuid:
         delete_data(items_collection, uuid)

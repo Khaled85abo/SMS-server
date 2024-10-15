@@ -117,7 +117,7 @@ def find_item_uuid(collection, db_id):
     results = collection.query.fetch_objects(
         filters=Filter.by_property("item_id").equal(db_id)
     )
-    if results:
+    if len(results.objects) > 0:
         print(results)
         result = results.objects
         # If we found a matching object, update it
@@ -208,5 +208,5 @@ def add_manual_to_weaviate(client, manual_id, content, type, workspace):
     )
 
 
-def close_client(client):
+def close_client():
     client.close() 

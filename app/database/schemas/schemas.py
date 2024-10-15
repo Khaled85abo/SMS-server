@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict,  EmailStr
 from typing import Optional, List
 from datetime import datetime
 
-class ItemSchema(BaseModel):
+class ItemPOSTSchema(BaseModel):
     name: str = Field(..., description="The name of the item")
     description: str = Field(..., description="The description of the item")
     quantity: int = Field(..., description="The quantity of the item")
@@ -19,6 +19,13 @@ class ItemSchema(BaseModel):
             "user_id": "1",
         }
     })
+
+class ItemPUTSchema(BaseModel): 
+    name: str = Field(..., description="The name of the item")
+    description: str = Field(..., description="The description of the item")
+    quantity: Optional[int] = Field(None, description="The quantity of the item")
+    image: Optional[str] = Field(None, description="The image of the item")
+    status: Optional[str] = Field(None, description="The status of the item")
 
 
 
@@ -132,3 +139,4 @@ class BoxWithItemsAndImagesSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
