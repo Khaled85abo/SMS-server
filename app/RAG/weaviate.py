@@ -1,15 +1,15 @@
-from langchain_ollama import OllamaEmbeddings
+# from langchain_ollama import OllamaEmbeddings
 import os
-from langchain.embeddings.openai import OpenAIEmbeddings
+# from langchain.embeddings.openai import OpenAIEmbeddings
 import weaviate
 from weaviate.classes.init import Auth
 import weaviate.classes.config as wc
 from weaviate.classes.query import Filter
-
-embeddings_openai = OpenAIEmbeddings(openai_api_key = os.getenv("OPENAI_API_KEY"))
-embeddings_llama = OllamaEmbeddings(
-    model="mxbai-embed-large",
-)
+from app.routers.item_router import get_items
+# embeddings_openai = OpenAIEmbeddings(openai_api_key = os.getenv("OPENAI_API_KEY"))
+# embeddings_llama = OllamaEmbeddings(
+#     model="mxbai-embed-large",
+# )
 
 # Best practice: store your credentials in environment variables
 wcd_url = os.environ["WEAVAITE_URL"]
@@ -22,18 +22,45 @@ client = weaviate.connect_to_weaviate_cloud(
     headers={'X-OpenAI-Api-key': openai_api_key}  # Replace with your OpenAI API key
 )
 
-# http://localhost:11434/api/embeddings
-# ollama.embeddings(
-#   model='mxbai-embed-large',
-#   prompt='Llamas are members of the camelid family',
-# )
+# def create_weaviate_client():   
+#     client = weaviate.connect_to_weaviate_cloud(
+#         cluster_url=wcd_url,  # Replace with your Weaviate Cloud URL
+#         auth_credentials=Auth.api_key(wcd_api_key),  # Replace with your Weaviate Cloud key
+#         headers={'X-OpenAI-Api-key': openai_api_key}  # Replace with your OpenAI API key
+#     )
+#     return client
 
 
-# def get_items_collection():
-#     return client.collections.get("Item")
+def init_weaviate():
+    # create_weaviate_manuals()
+    create_weaviate_items()
 
-# def get_manuals_collection():
-#     return client.collections.get("Manual")
+
+def insert_manuals_to_weaviate(manuals_collection):
+    pass
+
+def insert_items_to_weaviate(items_collection):
+    items_db = get_items()
+    with items_collection.batch.dynamic() as batch:
+        for item in items_db:
+            batch.add_object(
+            properties={
+                "item_id": item.id,
+                "name": item.name,
+                "description": item.description,
+                "box": item.box,
+                "workspace": item.workspace,
+                })
+            if batch.number_errors > 100:
+                print("Error inserting items to weaviate")
+
+
+
+def get_items_collection(client):
+    return client.collections.get("Item")
+
+def get_manuals_collection(client):
+    return client.collections.get("Manual")
 
 def create_weaviate_manuals():
     try:
@@ -48,36 +75,38 @@ def create_weaviate_manuals():
                 wc.Property(name="type", data_type=wc.DataType.TEXT , skip_vectorization=True),
                 wc.Property(name="workspace", data_type=wc.DataType.TEXT, skip_vectorization=True),
             ],
-            vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(),
+            vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(model="text-embedding-3-large"),
             generative_config=wc.Configure.Generative.openai(),
             vector_index_config=wc.Configure.VectorIndex.hnsw(
                 distance_metric=wc.VectorDistances.COSINE,
             ),
         )
         print(manuals.config.get(simple=False))
+        insert_manuals_to_weaviate(manuals_collection=manuals)
 
-def create_weaviate_schema():
+def create_weaviate_items():
     # Check if 'Item' class exists
     try:
         items =client.collections.get("Item")
         print(items.config.get(simple=False))
     except Exception as e:
-        print("Item collection already exists: Creating new Item collection")
-        client.collections.create(
+        print("Item collection does not exist: Creating new Item collection")
+        items = client.collections.create(
             name="Item",
             properties=[
-                wc.Property(name="item_id", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="item_id", data_type=wc.DataType.INT, skip_vectorization=True),
                 wc.Property(name="name", data_type=wc.DataType.TEXT),
                 wc.Property(name="description", data_type=wc.DataType.TEXT, optional=True),
                 wc.Property(name="box", data_type=wc.DataType.TEXT, skip_vectorization=True),
                 wc.Property(name="workspace", data_type=wc.DataType.TEXT, skip_vectorization=True),
             ],
-            vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(),
+            vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(model="text-embedding-3-large"),
             generative_config=wc.Configure.Generative.openai(),
             vector_index_config=wc.Configure.VectorIndex.hnsw(
                 distance_metric=wc.VectorDistances.COSINE,
             ),
         )
+        insert_items_to_weaviate(items_collection=items)
 
 
 
@@ -177,10 +206,5 @@ def add_manual_to_weaviate(client, manual_id, content, type, workspace):
     )
 
 
-def create_weaviate_client( wcd_url, wcd_api_key, openai_api_key):
-    client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=wcd_url,  # Replace with your Weaviate Cloud URL
-        auth_credentials=Auth.api_key(wcd_api_key),  # Replace with your Weaviate Cloud key
-        headers={'X-OpenAI-Api-key': openai_api_key}  # Replace with your OpenAI API key
-    )
-    return client
+def close_client(client):
+    client.close() 

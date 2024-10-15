@@ -125,8 +125,8 @@ async def create_item(
 #     return items_with_images
 
 @router.get("/")
-async def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    items = db.query(Item).options(joinedload(Item.images), joinedload(Item.box).joinedload(Box.work_space)).offset(skip).limit(limit).all()
+async def get_items( db: Session = Depends(get_db)):
+    items = db.query(Item).options(joinedload(Item.images), joinedload(Item.box).joinedload(Box.work_space)).all()
     
     items_with_images_and_workspace = []
     for item in items:
