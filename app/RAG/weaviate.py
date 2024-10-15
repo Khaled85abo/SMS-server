@@ -5,7 +5,7 @@ import weaviate
 from weaviate.classes.init import Auth
 import weaviate.classes.config as wc
 from weaviate.classes.query import Filter
-from app.routers.item_router import get_items
+# from app.routers.item_router import get_items
 # embeddings_openai = OpenAIEmbeddings(openai_api_key = os.getenv("OPENAI_API_KEY"))
 # embeddings_llama = OllamaEmbeddings(
 #     model="mxbai-embed-large",
@@ -39,23 +39,23 @@ async def init_weaviate():
 def insert_manuals_to_weaviate(manuals_collection):
     pass
 
-async def insert_items_to_weaviate(items_collection):
-    print("inserting items to weaviate")
-    print(items_collection)
-    items_db =await get_items()
-    print(items_db)
-    with items_collection.batch.dynamic() as batch:
-        for item in items_db:
-            batch.add_object(
-            properties={
-                "item_id": item.id,
-                "name": item.name,
-                "description": item.description,
-                "box": item.box,
-                "workspace": item.workspace,
-                })
-            if batch.number_errors > 100:
-                print("Error inserting items to weaviate")
+# async def insert_items_to_weaviate(items_collection):
+#     print("inserting items to weaviate")
+#     print(items_collection)
+#     items_db =await get_items()
+#     print(items_db)
+#     with items_collection.batch.dynamic() as batch:
+#         for item in items_db:
+#             batch.add_object(
+#             properties={
+#                 "item_id": item.id,
+#                 "name": item.name,
+#                 "description": item.description,
+#                 "box": item.box,
+#                 "workspace": item.workspace,
+#                 })
+#             if batch.number_errors > 100:
+#                 print("Error inserting items to weaviate")
 
 
 
@@ -109,7 +109,7 @@ async def create_weaviate_item_collection():
                 distance_metric=wc.VectorDistances.COSINE,
             ),
         )
-        await insert_items_to_weaviate(items_collection=items)
+        # await insert_items_to_weaviate(items_collection=items)
 
 
 

@@ -72,9 +72,10 @@ async def create_item(
     db: Session = Depends(get_db)
 ):
     # Create the item in the database
+    print(item)
     box = item.box
     workspace = item.workspace
-    db_item = Item(**item.model_dump(exclude={'image'}))
+    db_item = Item(**item.model_dump(exclude={'image', 'box', 'workspace'}))
     db.add(db_item)
     db.flush()  # Flush to get the item_id
 
@@ -111,14 +112,17 @@ async def create_item(
     db.refresh(db_item)
 
     # Add the item to Weaviate
-    items_collection = get_items_collection()
-    add_data(collection= items_collection, properties={
+    try:    
+        items_collection = get_items_collection()
+        add_data(collection= items_collection, properties={
         "item_id": db_item.id,
         "name": db_item.name,
         "description": db_item.description,
         "box": box,
         "workspace": workspace
-    })
+        })
+    except Exception as e:
+        print(e)
 
     return db_item
 

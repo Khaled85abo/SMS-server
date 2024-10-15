@@ -20,7 +20,15 @@ class ItemSchema(BaseModel):
         }
     })
 
-class ItemOutSchema(ItemSchema):
+
+
+
+class ItemOutSchema(BaseModel):
+    name: str = Field(..., description="The name of the item")
+    description: str = Field(..., description="The description of the item")
+    quantity: int = Field(..., description="The quantity of the item")
+    image: Optional[str] = Field(None, description="The image of the item")
+    box_id: int = Field(..., description="The box id of the item")
     status: str | None = Field(..., description="The status of the item")
     id: int
 
