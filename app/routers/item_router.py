@@ -11,6 +11,7 @@ from uuid import uuid4
 from typing import Annotated
 from fastapi.responses import JSONResponse
 from app.RAG.weaviate import client, get_items_collection, add_data, update_data, delete_data, find_item_uuid
+from sqlalchemy.exc import SQLAlchemyError
 
 router = APIRouter()
 
@@ -71,60 +72,81 @@ async def create_item(
     user_id: Annotated[int, Depends(get_user_id)],
     db: Session = Depends(get_db)
 ):
-    # Create the item in the database
-    print(item)
-    box = item.box
-    workspace = item.workspace
-    db_item = Item(**item.model_dump(exclude={'image', 'box', 'workspace'}))
-    db.add(db_item)
-    db.flush()  # Flush to get the item_id
+    try:
+        # Start database transaction
+        db.begin_nested()
 
-    # Handle image upload if present
-    if item.image:
+        # Create the item in the database
+        print(item)
+        box = item.box
+        workspace = item.workspace
+        db_item = Item(**item.model_dump(exclude={'image', 'box', 'workspace'}))
+        db.add(db_item)
+        db.flush()  # Flush to get the item_id
+
+        # Handle image upload if present
+        if item.image:
+            try:
+                # Decode base64 image
+                image_data = base64.b64decode(item.image)
+                
+                # Generate a unique filename
+                file_extension = "png"  # You might want to determine this dynamically
+                unique_filename = f"{uuid4()}.{file_extension}"
+                
+                # Create an UploadFile object with the unique filename
+                file = UploadFile(filename=unique_filename, file=BytesIO(image_data))
+                
+                # Use the upload_image function with user_id
+                image_result = await upload_image(file, user_id)
+                print(image_result)
+                image_url = image_result["imageURL"]
+                print(image_url)
+                
+                # Create ItemImage record
+                db_image = ItemImage(url=image_url, item_id=db_item.id)
+                db.add(db_image)
+            
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                                    detail=f"Error processing image: {str(e)}")
+
+        # Add the item to Weaviate
         try:
-            # Decode base64 image
-            image_data = base64.b64decode(item.image)
-            
-            # Generate a unique filename
-            file_extension = "png"  # You might want to determine this dynamically
-            unique_filename = f"{uuid4()}.{file_extension}"
-            
-            # Create an UploadFile object with the unique filename
-            file = UploadFile(filename=unique_filename, file=BytesIO(image_data))
-            
-            # Use the upload_image function with user_id
-            image_result = await upload_image(file, user_id)
-            print(image_result)
-            image_url = image_result["imageURL"]
-            print(image_url)
-            
-            # Create ItemImage record
-            db_image = ItemImage(url=image_url, item_id=db_item.id)
-            db.add(db_image)
-        
-        except Exception as e:
+            items_collection = get_items_collection()
+            add_data(collection=items_collection, properties={
+                "item_id": db_item.id,
+                "name": db_item.name,
+                "description": db_item.description,
+                "box": box,
+                "workspace": workspace
+            })
+        except Exception as weaviate_error:
             db.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
-                                detail=f"Error processing image: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                                detail=f"Weaviate operation failed: {str(weaviate_error)}")
 
-    # Commit the transaction
-    db.commit()
-    db.refresh(db_item)
+        # If we've made it this far, commit the database transaction
+        db.commit()
+        db.refresh(db_item)
 
-    # Add the item to Weaviate
-    try:    
-        items_collection = get_items_collection()
-        add_data(collection= items_collection, properties={
-        "item_id": db_item.id,
-        "name": db_item.name,
-        "description": db_item.description,
-        "box": box,
-        "workspace": workspace
-        })
+        return db_item
+
+    except SQLAlchemyError as db_error:
+        db.rollback()
+        print(f"Database error occurred: {str(db_error)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                            detail=f"Database operation failed: {str(db_error)}")
+
+    except HTTPException:
+        # Re-raise HTTP exceptions (like the ones we defined for Weaviate errors)
+        raise
+
     except Exception as e:
-        print(e)
-
-    return db_item
+        db.rollback()
+        print(f"Unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                            detail=f"An unexpected error occurred: {str(e)}")
 
 # @router.get("/")
 # async def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -181,27 +203,51 @@ async def read_item(item_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{item_id}", response_model=ItemOutSchema)
 async def update_item(item_id: int, item: ItemPUTSchema, db: Session = Depends(get_db)):
-    db_item = db.query(Item).filter(Item.id == item_id).first()
-    if db_item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
-    
-    # Update the item in the database
-    for key, value in item.model_dump(exclude={'image'}).items():
-        if value is not None:
-            setattr(db_item, key, value)
-    db.commit()
-    db.refresh(db_item)
+    try:
+        db.begin_nested()
 
-    # Update the item in Weaviate
-    items_collection = get_items_collection()
-    uuid = find_item_uuid(items_collection, item_id)
-    if uuid:
-        update_data(items_collection, uuid, {
-            "name": db_item.name,
-            "description": db_item.description,
-        })
+        db_item = db.query(Item).filter(Item.id == item_id).first()
+        if db_item is None:
+            raise HTTPException(status_code=404, detail="Item not found")
+        
+        # Update the item in the database
+        for key, value in item.model_dump(exclude={'image'}).items():
+            if value is not None:
+                setattr(db_item, key, value)
 
-    return db_item
+        # Update the item in Weaviate
+        try:
+            items_collection = get_items_collection()
+            uuid = find_item_uuid(items_collection, item_id)
+            if uuid:
+                update_data(items_collection, uuid, {
+                    "name": db_item.name,
+                    "description": db_item.description,
+                })
+        except Exception as weaviate_error:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                                detail=f"Weaviate operation failed: {str(weaviate_error)}")
+
+        db.commit()
+        db.refresh(db_item)
+
+        return db_item
+
+    except SQLAlchemyError as db_error:
+        db.rollback()
+        print(f"Database error occurred: {str(db_error)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                            detail=f"Database operation failed: {str(db_error)}")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        db.rollback()
+        print(f"Unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                            detail=f"An unexpected error occurred: {str(e)}")
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_item(item_id: int, db: Session = Depends(get_db)):
