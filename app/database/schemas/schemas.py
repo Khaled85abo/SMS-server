@@ -140,3 +140,10 @@ class BoxWithItemsAndImagesSchema(BaseModel):
     class Config:
         orm_mode = True
 
+
+
+class SearchDataSchema():
+    query: str  = Field(..., description="the search query")
+    workspace: Optional[str] =  Field(..., description="the workspace name")
+    type: str = Field(..., description="the search type either keyword or semantic")
+
