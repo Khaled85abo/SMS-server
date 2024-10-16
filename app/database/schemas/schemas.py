@@ -142,7 +142,7 @@ class BoxWithItemsAndImagesSchema(BaseModel):
 
 
 
-class SearchDataSchema():
+class SearchDataSchema(BaseModel):
     query: str  = Field(..., description="the search query")
     workspace: Optional[str] =  Field(..., description="the workspace name")
     type: str = Field(..., description="the search type either keyword or semantic")

@@ -167,34 +167,19 @@ def semantic_items_search(collection, query, workspace, limit=5):
     return response
 
 
-def get_item_details(response):
+def serialize_items(response):
+    results = []
     for obj in response.objects:
         # Accessing UUID
-        uuid = obj.uuid
-        print("UUID:", uuid)
-
-        # Accessing Metadata (if needed)
-        creation_time = obj.metadata.creation_time
-        print("Creation Time:", creation_time)
-
-        # Accessing properties
-        properties = obj.properties
-        workspace = properties['workspace']
-        description = properties['description']
-        box = properties['box']
-        item_id = properties['item_id']
-        name = properties['name']
-
-        print("Workspace:", workspace)
-        print("Description:", description)
-        print("Box:", box)
-        print("Item ID:", item_id)
-        print("Name:", name)
-
-        # Accessing collection if needed
-        collection = obj.collection
-        print("Collection:", collection)
-    return response
+        item = {}
+        item["uuid"] = obj.uuid
+        item["name"] = obj.properties['name']
+        item["description"] = obj.properties['description']
+        item["box"] = obj.properties['box']
+        item["item_id"] = obj.properties['item_id']
+        item["workspace"] = obj.properties['workspace']
+        results.append(item)
+    return results
 
 def add_manual_to_weaviate(client, manual_id, content, type, workspace):
     client.data_object.create(
@@ -206,6 +191,36 @@ def add_manual_to_weaviate(client, manual_id, content, type, workspace):
         },
         class_name="Manual",
     )
+
+
+def search_items(workspace, query, type):
+    items_collection = get_items_collection()
+    if workspace:
+        if type == "keyword":
+            results = items_collection.query.bm25(
+                query=query,
+            limit=10,
+                filters=Filter.by_property("workspace").equal(workspace)
+            )
+        else:
+            results = items_collection.query.near_text(
+                query=query,
+                limit=10,
+                filters=Filter.by_property("workspace").equal(workspace)
+            )
+    else:
+        if type == "keyword":
+            results = items_collection.query.bm25(
+                query=query,
+                limit=10,
+            )
+        else:
+            results = items_collection.query.near_text(
+                query=query,
+                limit=10,
+            )
+    return {"results": results} 
+
 
 
 def close_client():
