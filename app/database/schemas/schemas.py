@@ -2,12 +2,14 @@ from pydantic import BaseModel, Field, ConfigDict,  EmailStr
 from typing import Optional, List
 from datetime import datetime
 
-class ItemSchema(BaseModel):
+class ItemPOSTSchema(BaseModel):
     name: str = Field(..., description="The name of the item")
     description: str = Field(..., description="The description of the item")
     quantity: int = Field(..., description="The quantity of the item")
     image: Optional[str] = Field(None, description="The image of the item")
     box_id: int = Field(..., description="The box id of the item")
+    box: Optional[str] = Field(None, description="The box of the item")
+    workspace: Optional[str] = Field(None, description="The workspace of the item")
     
     model_config = ConfigDict(from_attributes=True, json_schema_extra={
         "example": {
@@ -18,7 +20,22 @@ class ItemSchema(BaseModel):
         }
     })
 
-class ItemOutSchema(ItemSchema):
+class ItemPUTSchema(BaseModel): 
+    name: str = Field(..., description="The name of the item")
+    description: str = Field(..., description="The description of the item")
+    quantity: Optional[int] = Field(None, description="The quantity of the item")
+    image: Optional[str] = Field(None, description="The image of the item")
+    status: Optional[str] = Field(None, description="The status of the item")
+
+
+
+
+class ItemOutSchema(BaseModel):
+    name: str = Field(..., description="The name of the item")
+    description: str = Field(..., description="The description of the item")
+    quantity: int = Field(..., description="The quantity of the item")
+    image: Optional[str] = Field(None, description="The image of the item")
+    box_id: int = Field(..., description="The box id of the item")
     status: str | None = Field(..., description="The status of the item")
     id: int
 
@@ -122,3 +139,4 @@ class BoxWithItemsAndImagesSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
