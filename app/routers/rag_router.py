@@ -15,10 +15,10 @@ async def embed_db(db: Session = Depends(get_db)):
     try:
         items_db =await get_items(db=db)
         items_collection = get_items_collection()
-        print("\033[1;35m" + "Items to be added:" + "\033[0m", items_db) 
+        print("\033[1;35m" + "Items to added:" + "\033[0m", items_db) 
         with items_collection.batch.dynamic() as batch:
             for item in items_db:
-                print("\033[1;35m" + "Item to be added:" + "\033[0m", item)  # Bold magenta text
+                print("\033[1;35m" + "Add item:" + "\033[0m", item)  # Bold magenta text
                 batch.add_object(
                 properties={
                     "item_id": item['id'],
@@ -26,6 +26,8 @@ async def embed_db(db: Session = Depends(get_db)):
                     "description": item['description'],
                     "box": item['box'],
                     "workspace": item['workspace'],
+                    "workspace_id": item['workspace_id'],
+                    "box_id": item['box_id'],
                         })
             if batch.number_errors > 0:
                 print("\033[1;31m" + "Error inserting items to weaviate" + "\033[0m")

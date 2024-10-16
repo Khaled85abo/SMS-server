@@ -102,6 +102,8 @@ async def create_weaviate_item_collection():
                 wc.Property(name="description", data_type=wc.DataType.TEXT, optional=True),
                 wc.Property(name="box", data_type=wc.DataType.TEXT, skip_vectorization=True),
                 wc.Property(name="workspace", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="workspace_id", data_type=wc.DataType.INT, skip_vectorization=True),
+                wc.Property(name="box_id", data_type=wc.DataType.INT, skip_vectorization=True),
             ],
             vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(model="text-embedding-3-large"),
             generative_config=wc.Configure.Generative.openai(),
@@ -178,6 +180,8 @@ def serialize_items(response):
         item["box"] = obj.properties['box']
         item["item_id"] = obj.properties['item_id']
         item["workspace"] = obj.properties['workspace']
+        item["workspace_id"] = obj.properties['workspace_id']
+        item["box_id"] = obj.properties['box_id']
         results.append(item)
     return results
 
