@@ -79,12 +79,13 @@ async def get_all_workspaces(
     user: User = Depends(get_user)
 ):
     try:
-        # Query workspaces with user roles and eagerly load boxes and items
+        # Query workspaces with user roles and eagerly load boxes, items, and resources
         workspaces_with_roles = db.query(WorkSpace, UserWorkSpace.role).join(
             UserWorkSpace, 
             (UserWorkSpace.work_space_id == WorkSpace.id) & (UserWorkSpace.user_id == user.id)
         ).options(
-            joinedload(WorkSpace.boxes).joinedload(Box.items)
+            joinedload(WorkSpace.boxes).joinedload(Box.items),
+            joinedload(WorkSpace.resources)
         ).offset(skip).limit(limit).all()
 
         # Prepare the response
@@ -96,6 +97,7 @@ async def get_all_workspaces(
                 {**box.__dict__, 'items': [item.__dict__ for item in box.items]}
                 for box in workspace.boxes
             ]
+            workspace_dict['resources'] = [resource.__dict__ for resource in workspace.resources]
             result.append(WorkSpaceOutSchema(**workspace_dict))
 
         return result
@@ -127,8 +129,9 @@ async def get_single_workspace(
         UserWorkSpace,
         (UserWorkSpace.work_space_id == WorkSpace.id) & (UserWorkSpace.user_id == user_id)
     ).options(
-            joinedload(WorkSpace.boxes).joinedload(Box.items)
-        ).filter(WorkSpace.id == workspace_id).first()
+        joinedload(WorkSpace.boxes).joinedload(Box.items),
+        joinedload(WorkSpace.resources)
+    ).filter(WorkSpace.id == workspace_id).first()
 
     if workspace_with_role is None:
         raise HTTPException(status_code=404, detail="WorkSpace not found")
@@ -139,9 +142,10 @@ async def get_single_workspace(
     workspace_dict = workspace.__dict__
     workspace_dict['role'] = role
     workspace_dict['boxes'] = [
-    {**box.__dict__, 'items': [item.__dict__ for item in box.items]}
-    for box in workspace.boxes]
-
+        {**box.__dict__, 'items': [item.__dict__ for item in box.items]}
+        for box in workspace.boxes
+    ]
+    workspace_dict['resources'] = [resource.__dict__ for resource in workspace.resources]
 
     return workspace_dict
 

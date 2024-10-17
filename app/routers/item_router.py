@@ -178,7 +178,9 @@ async def get_items( db: Session = Depends(get_db)):
             'status': item.status,
             'images': [{'id': image.id, 'url': image.url} for image in item.images],
             'box': item.box.name if item.box else None,
-            'workspace': item.box.work_space.name if item.box and item.box.work_space else None
+            'workspace': item.box.work_space.name if item.box and item.box.work_space else None,
+            "workspace_id": item.box.work_space.id if item.box and item.box.work_space else None,
+            "box_id": item.box.id if item.box else None,
         }
         items_with_images_and_workspace.append(item_dict)
 

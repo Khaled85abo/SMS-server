@@ -79,7 +79,10 @@ async def create_weaviate_manual_collection():
                 wc.Property(name="workspace", data_type=wc.DataType.TEXT, skip_vectorization=True),
             ],
             vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(model="text-embedding-3-large"),
-            generative_config=wc.Configure.Generative.openai(),
+            generative_config=wc.Configure.Generative.openai(
+                model="gpt-4o",
+                max_tokens=128000
+            ),
             vector_index_config=wc.Configure.VectorIndex.hnsw(
                 distance_metric=wc.VectorDistances.COSINE,
             ),
@@ -102,9 +105,14 @@ async def create_weaviate_item_collection():
                 wc.Property(name="description", data_type=wc.DataType.TEXT, optional=True),
                 wc.Property(name="box", data_type=wc.DataType.TEXT, skip_vectorization=True),
                 wc.Property(name="workspace", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="workspace_id", data_type=wc.DataType.INT, skip_vectorization=True),
+                wc.Property(name="box_id", data_type=wc.DataType.INT, skip_vectorization=True),
             ],
             vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(model="text-embedding-3-large"),
-            generative_config=wc.Configure.Generative.openai(),
+            generative_config=wc.Configure.Generative.openai(
+                model="gpt-4o",
+                max_tokens=128000
+            ),  
             vector_index_config=wc.Configure.VectorIndex.hnsw(
                 distance_metric=wc.VectorDistances.COSINE,
             ),
@@ -167,34 +175,21 @@ def semantic_items_search(collection, query, workspace, limit=5):
     return response
 
 
-def get_item_details(response):
+def serialize_items(response):
+    results = []
     for obj in response.objects:
         # Accessing UUID
-        uuid = obj.uuid
-        print("UUID:", uuid)
-
-        # Accessing Metadata (if needed)
-        creation_time = obj.metadata.creation_time
-        print("Creation Time:", creation_time)
-
-        # Accessing properties
-        properties = obj.properties
-        workspace = properties['workspace']
-        description = properties['description']
-        box = properties['box']
-        item_id = properties['item_id']
-        name = properties['name']
-
-        print("Workspace:", workspace)
-        print("Description:", description)
-        print("Box:", box)
-        print("Item ID:", item_id)
-        print("Name:", name)
-
-        # Accessing collection if needed
-        collection = obj.collection
-        print("Collection:", collection)
-    return response
+        item = {}
+        item["uuid"] = obj.uuid
+        item["name"] = obj.properties['name']
+        item["description"] = obj.properties['description']
+        item["box"] = obj.properties['box']
+        item["item_id"] = obj.properties['item_id']
+        item["workspace"] = obj.properties['workspace']
+        item["workspace_id"] = obj.properties['workspace_id']
+        item["box_id"] = obj.properties['box_id']
+        results.append(item)
+    return results
 
 def add_manual_to_weaviate(client, manual_id, content, type, workspace):
     client.data_object.create(
@@ -206,6 +201,73 @@ def add_manual_to_weaviate(client, manual_id, content, type, workspace):
         },
         class_name="Manual",
     )
+
+
+def search_items(workspace, query, type, limit=10):
+    items_collection = get_items_collection()
+    if workspace:
+        if type == "keyword":
+            results = items_collection.query.bm25(
+                query=query,
+            limit=limit,
+                filters=Filter.by_property("workspace").equal(workspace)
+            )
+        else:
+            results = items_collection.query.near_text(
+                query=query,
+                limit=limit,
+                filters=Filter.by_property("workspace").equal(workspace)
+            )
+    else:
+        if type == "keyword":
+            results = items_collection.query.bm25(
+                query=query,
+                limit=limit,
+            )
+        else:
+            results = items_collection.query.near_text(
+                query=query,
+                limit=limit,
+            )
+    return results
+
+
+def semantic_search_items(workspace, query, type, limit=10):
+
+    # prompt =f"return the items that are related to: {query}, no explanation needed! if no items match, return empty array"
+    # prompt =f"return the items that are related to the: {query}, explain it to yourself, but do not return the explanation! if no items match, return nothing"
+    prompt =f"return the items that are related to the: {query}, NO explanation needed! if no items match, return nothing at all"
+    items_collection = get_items_collection()
+    if workspace:
+        if type == "keyword":
+            results = items_collection.generate.bm25(
+                query=query,
+            limit=limit,
+                filters=Filter.by_property("workspace").equal(workspace),
+                grouped_task=prompt
+            )
+        else:
+            results = items_collection.generate.near_text(
+                query=query,
+                limit=limit,
+                filters=Filter.by_property("workspace").equal(workspace),
+                grouped_task=prompt
+            )
+    else:
+        if type == "keyword":
+            results = items_collection.generate.bm25(
+                query=query,
+                limit=limit,
+                grouped_task=prompt
+            )
+        else:
+            results = items_collection.generate.near_text(
+                query=query,
+                limit=limit,
+                grouped_task=prompt
+            )
+    return results 
+
 
 
 def close_client():

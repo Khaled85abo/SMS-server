@@ -46,6 +46,7 @@ class WorkSpace(Base):
     boxes: Mapped[list["Box"]] = relationship(back_populates="work_space", cascade="all, delete")
     share_code: Mapped[str] = mapped_column(nullable=True)
     users: Mapped[list["User"]] = relationship(secondary="user_work_space", back_populates="work_spaces")
+    resources: Mapped[list["Resource"]] = relationship(back_populates="work_space", cascade="all, delete")
 
     def __repr__(self):
         return f"<Work_space={self.name}>"
@@ -62,7 +63,7 @@ class User(Base):
     access_token: Mapped[str] = mapped_column(nullable=True)
     token_type: Mapped[str] = mapped_column(nullable=True)
     username: Mapped[str] = mapped_column(nullable=False)
-    
+    resources: Mapped[list["Resource"]] = relationship(back_populates="user", cascade="all, delete")
     work_spaces: Mapped[list["WorkSpace"]] = relationship(secondary="user_work_space", back_populates="users")
 
     def __repr__(self):
@@ -81,3 +82,23 @@ class UserWorkSpace(Base):
     def __repr__(self):
         return f"<User_work_space={self.user_id}>"
 
+class Resource(Base):
+    __tablename__ = "resource"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    file_extension: Mapped[str] = mapped_column(String(10), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    tags: Mapped[str] = mapped_column(Text, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), nullable=True)
+    work_space_id: Mapped[int] = mapped_column(ForeignKey("work_space.id", ondelete="CASCADE", onupdate="CASCADE"))
+
+    work_space: Mapped["WorkSpace"] = relationship(back_populates="resources", foreign_keys=[work_space_id])
+    user: Mapped["User"] = relationship(back_populates="resources", foreign_keys=[user_id]) 
+
+    def __repr__(self):
+        return f"<Resource={self.name}>"
