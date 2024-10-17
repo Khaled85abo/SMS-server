@@ -40,20 +40,23 @@ async def embed_db(db: Session = Depends(get_db)):
 @router.post("/search")
 async def keyword_search(data:SearchDataSchema  , db: Session = Depends(get_db)):
     try:
-        results=search_items(workspace =data.workspace,query=data.query,type=data.type)
-        return {"results": serialize_items(results)}
+        if data.use_ai_filter:
+            results=semantic_search_items(workspace =data.workspace,query=data.query,type=data.type)
+            return{"generated_result":results.generated, "results":serialize_items(results)}
+        else:
+            results=search_items(workspace =data.workspace,query=data.query,type=data.type)
+            return {"results": serialize_items(results)}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Error keyword searching: {e}")
     
 
-@router.post("/semantic-search")
-async def semantic_search(data:SearchDataSchema  , db: Session = Depends(get_db)):
-    try:
-        results=semantic_search_items(workspace=data.workspace,query=data.query,type=data.type)
-        return{"results":results.generated}
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=f"Error semantic searching: {e}")
+# @router.post("/semantic-search")
+# async def semantic_search(data:SearchDataSchema  , db: Session = Depends(get_db)):
+#     try:
+#         results=semantic_search_items(workspace=data.workspace,query=data.query,type=data.type)
+#     except Exception as e:
+#         print(e)
+#         raise HTTPException(status_code=500, detail=f"Error semantic searching: {e}")
     
 

@@ -146,4 +146,5 @@ class SearchDataSchema(BaseModel):
     query: str  = Field(..., description="the search query")
     workspace: Optional[str] =  Field(..., description="the workspace name")
     type: str = Field(..., description="the search type either keyword or semantic")
+    use_ai_filter: bool = Field(..., description="use ai filter")
 
