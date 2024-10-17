@@ -148,3 +148,37 @@ class SearchDataSchema(BaseModel):
     type: str = Field(..., description="the search type either keyword or semantic")
     use_ai_filter: bool = Field(..., description="use ai filter")
 
+class ResourceSchema(BaseModel):
+    id: int
+    name: str = Field(..., description="The name of the resource")
+    resource_type: str = Field(..., description="The type of the resource")
+    file_path: str = Field(..., description="The file path of the resource")
+    file_size: int = Field(..., description="The file size of the resource in bytes")
+    file_extension: str = Field(..., description="The file extension of the resource")
+    description: Optional[str] = Field(None, description="The description of the resource")
+    tags: Optional[str] = Field(None, description="Tags associated with the resource")
+    version: int = Field(..., description="The version of the resource")
+    work_space_id: int = Field(..., description="The ID of the workspace the resource belongs to")
+    user_id: Optional[int] = Field(None, description="The ID of the user who owns the resource")
+    created_date: datetime
+    updated_date: Optional[datetime]
+
+class ResourceCreateSchema(BaseModel):
+    name: str = Field(..., description="The name of the resource")
+    description: Optional[str] = Field(None, description="The description of the resource")
+    tags: Optional[str] = Field(None, description="Tags associated with the resource")
+    work_space_id: int = Field(..., description="The ID of the workspace the resource belongs to")
+
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
+        "example": {
+            "name": "Project Report",
+            "description": "Final report for the Q2 project",
+            "tags": "report, project, Q2",
+            "work_space_id": 1
+        }
+    })
+
+class ResourceUpdateSchema(BaseModel):
+    name: Optional[str] = Field(None, description="The name of the resource")
+    description: Optional[str] = Field(None, description="The description of the resource")
+    tags: Optional[str] = Field(None, description="Tags associated with the resource")
