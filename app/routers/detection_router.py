@@ -31,7 +31,8 @@ os.environ['EASYOCR_MODULE_PATH'] = MODEL_DIR
 
 # Load the YOLO model
 model = YOLO('yolov8n.pt')
-model_8x = YOLO('yolov8x.pt')
+model_8x = YOLO('yolov8n.pt')
+# model_8x = YOLO('yolov8x.pt')
 pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
 # Load the YOLOv8s model for better small object detection
