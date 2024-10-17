@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from app.RAG.weaviate import get_items_collection
+from app.RAG.weaviate import get_items_collection, search_items,semantic_search_items
 from app.routers.item_router import get_items
 from app.RAG.weaviate import serialize_items
 from app.db_setup import get_db
@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 
-@router.post("/populate-db")
+@router.post("/embed-db")
 async def embed_db(db: Session = Depends(get_db)):
     try:
         items_db =await get_items(db=db)
@@ -38,41 +38,22 @@ async def embed_db(db: Session = Depends(get_db)):
 
 
 @router.post("/search")
-async def keyword_search(search_data:SearchDataSchema  , db: Session = Depends(get_db)):
-    print(search_data)
+async def keyword_search(data:SearchDataSchema  , db: Session = Depends(get_db)):
     try:
-        query = search_data.query
-        workspace = search_data.workspace
-        type = search_data.type
-        items_collection = get_items_collection()
-        results=None
-        if workspace:
-            if type == "keyword":
-                results = items_collection.query.bm25(
-                    query=query,
-                limit=10,
-                    filters=Filter.by_property("workspace").equal(workspace)
-                )
-            else:
-                results = items_collection.query.near_text(
-                    query=query,
-                    limit=10,
-                    filters=Filter.by_property("workspace").equal(workspace)
-                )
-        else:
-            if type == "keyword":
-                results = items_collection.query.bm25(
-                    query=query,
-                    limit=10,
-                )
-            else:
-                results = items_collection.query.near_text(
-                    query=query,
-                    limit=10,
-                )
+        results=search_items(workspace =data.workspace,query=data.query,type=data.type)
         return {"results": serialize_items(results)}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Error keyword searching: {e}")
+    
+
+@router.post("/semantic-search")
+async def semantic_search(data:SearchDataSchema  , db: Session = Depends(get_db)):
+    try:
+        results=semantic_search_items(workspace=data.workspace,query=data.query,type=data.type)
+        return{"results":results.generated}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Error semantic searching: {e}")
     
 
