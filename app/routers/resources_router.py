@@ -18,7 +18,7 @@ async def create_resource(
     resource: ResourceCreateSchema = Depends(),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    user: User = Depends(get_user)
+    user_id: int = Depends(get_user_id)
 ):
     # Get the workspace
     workspace = db.query(WorkSpace).filter(WorkSpace.id == resource.work_space_id).first()
@@ -40,7 +40,7 @@ async def create_resource(
         description=resource.description,
         tags=resource.tags,
         work_space_id=resource.work_space_id,
-        user_id=user["id"],
+        user_id=user_id,
         resource_type=file.content_type,
         file_path=file_path,
         file_size=os.path.getsize(file_path),
