@@ -29,7 +29,6 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 from app.database.models.base_model import Base
 from app.database.models import * # This line imports all the classes imported in the __init__.py in models folder
-# target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -61,6 +60,7 @@ def run_migrations_online() -> None:
 
 
 if context.is_offline_mode():
-    run_migrations_offline()
+    # run_migrations_offline()
+    pass
 else:
     run_migrations_online()
