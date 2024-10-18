@@ -236,7 +236,7 @@ def semantic_search_items(workspace, query, type, limit=10):
 
     # prompt =f"return the items that are related to: {query}, no explanation needed! if no items match, return empty array"
     # prompt =f"return the items that are related to the: {query}, explain it to yourself, but do not return the explanation! if no items match, return nothing"
-    prompt =f"return the items that are related to the: {query}, NO explanation needed! if no items match, return nothing at all"
+    prompt =f"return all the items that are related to '{query}', NO explanation needed! if no items match, return nothing at all"
     items_collection = get_items_collection()
     if workspace:
         if type == "keyword":

@@ -13,15 +13,20 @@ router = APIRouter()
 
 UPLOAD_DIRECTORY = "resources/uploads"
 
+from fastapi import Form
+
 @router.post("/", response_model=ResourceSchema)
 async def create_resource(
-    resource: ResourceCreateSchema = Depends(),
+    resource: str = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     user_id: int = Depends(get_user_id)
 ):
+    # Parse the JSON string into a ResourceCreateSchema object
+    resource_data = ResourceCreateSchema.model_validate_json(resource)
+    resource_data.status = "added"  
     # Get the workspace
-    workspace = db.query(WorkSpace).filter(WorkSpace.id == resource.work_space_id).first()
+    workspace = db.query(WorkSpace).filter(WorkSpace.id == resource_data.work_space_id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
 
@@ -36,10 +41,10 @@ async def create_resource(
 
     # Create resource in database
     db_resource = Resource(
-        name=resource.name,
-        description=resource.description,
-        tags=resource.tags,
-        work_space_id=resource.work_space_id,
+        name=resource_data.name,
+        description=resource_data.description,
+        tags=resource_data.tags,
+        work_space_id=resource_data.work_space_id,
         user_id=user_id,
         resource_type=file.content_type,
         file_path=file_path,
