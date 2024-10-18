@@ -57,9 +57,9 @@ async def create_resource(
 async def get_resources(
     workspace_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(get_user)
+    user_id: int = Depends(get_user_id)
 ):
-    resources = db.query(Resource).filter(Resource.work_space_id == workspace_id).all()
+    resources = db.query(Resource).filter(Resource.user_id == user_id).all()
     return resources
 
 @router.get("/{resource_id}", response_model=ResourceSchema)
