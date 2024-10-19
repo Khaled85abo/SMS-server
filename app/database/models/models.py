@@ -86,6 +86,7 @@ class Resource(Base):
     __tablename__ = "resource"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    status: Mapped[str] = mapped_column(Text, default="added")
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
     file_path: Mapped[str] = mapped_column(String(255), nullable=False)

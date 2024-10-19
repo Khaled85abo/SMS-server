@@ -15,3 +15,4 @@ yolov11l.pt
 yolov11x.pt
 app/routers/Tesseract-OCR/libtesseract-5.dll
 app/routers/ocr_model/craft_mlt_25k.pth
+resources
