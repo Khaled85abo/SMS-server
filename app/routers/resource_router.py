@@ -24,7 +24,6 @@ async def create_resource(
 ):
     # Parse the JSON string into a ResourceCreateSchema object
     resource_data = ResourceCreateSchema.model_validate_json(resource)
-    resource_data.status = "added"  
     # Get the workspace
     workspace = db.query(WorkSpace).filter(WorkSpace.id == resource_data.work_space_id).first()
     if not workspace:
@@ -44,6 +43,7 @@ async def create_resource(
         name=resource_data.name,
         description=resource_data.description,
         tags=resource_data.tags,
+        status="added",
         work_space_id=resource_data.work_space_id,
         user_id=user_id,
         resource_type=file.content_type,
@@ -60,11 +60,19 @@ async def create_resource(
 
 @router.get("/", response_model=List[ResourceSchema])
 async def get_resources(
-    workspace_id: int,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_user_id)
 ):
     resources = db.query(Resource).filter(Resource.user_id == user_id).all()
+    return resources
+
+@router.get("/workspace/{workspace_id}", response_model=List[ResourceSchema])
+async def get_resources(
+    workspace_id: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_user_id)
+):
+    resources = db.query(Resource).filter(Resource.work_space_id == workspace_id).all()
     return resources
 
 @router.get("/{resource_id}", response_model=ResourceSchema)

@@ -36,8 +36,6 @@ async def init_weaviate():
     await create_weaviate_item_collection()
 
 
-def insert_manuals_to_weaviate(manuals_collection):
-    pass
 
 # async def insert_items_to_weaviate(items_collection):
 #     print("inserting items to weaviate")
@@ -65,18 +63,27 @@ def get_items_collection():
 def get_manuals_collection():
     return client.collections.get("Manual")
 
-async def create_weaviate_manual_collection():
+async def create_weaviate_resource_collection():
     try:
-        manuals = client.collections.get("Manual")
-        print(manuals.config.get(simple=False))
+        sources = client.collections.get("Resource")
+        print(sources.config.get(simple=False))
     except Exception as e:
-        manuals = client.collections.create(
-            name="Manual",
+        sources = client.collections.create(
+            name="Resource",
             properties=[
-                wc.Property(name="manual_id", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="resource_id", data_type=wc.DataType.TEXT, skip_vectorization=True),
                 wc.Property(name="content", data_type=wc.DataType.TEXT),
-                wc.Property(name="type", data_type=wc.DataType.TEXT , skip_vectorization=True),
                 wc.Property(name="workspace", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="tags", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="file_path", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="file_size", data_type=wc.DataType.INT, skip_vectorization=True),
+                wc.Property(name="file_extension", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="file_name", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="start_offset", data_type=wc.DataType.INT, skip_vectorization=True),
+                wc.Property(name="end_offset", data_type=wc.DataType.INT, skip_vectorization=True),
+                wc.Property(name="resource_type", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="timestamp", data_type=wc.DataType.FLOAT, skip_vectorization=True),  # For audio/video
+                wc.Property(name="paragraph_number", data_type=wc.DataType.INT, skip_vectorization=True),
             ],
             vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(model="text-embedding-3-large"),
             generative_config=wc.Configure.Generative.openai(
@@ -87,8 +94,8 @@ async def create_weaviate_manual_collection():
                 distance_metric=wc.VectorDistances.COSINE,
             ),
         )
-        print(manuals.config.get(simple=False))
-        await insert_manuals_to_weaviate(manuals_collection=manuals)
+        print(sources.config.get(simple=False))
+        # await insert_manuals_to_weaviate(sources_collection=sources)
 
 async def create_weaviate_item_collection():
     # Check if 'Item' class exists

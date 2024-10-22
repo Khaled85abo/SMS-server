@@ -80,7 +80,7 @@ async def create_item(
         print(item)
         box = item.box
         workspace = item.workspace
-        db_item = Item(**item.model_dump(exclude={'image', 'box', 'workspace'}))
+        db_item = Item(**item.model_dump(exclude={'image', 'box', 'workspace', 'workspace_id'}))
         db.add(db_item)
         db.flush()  # Flush to get the item_id
 
@@ -119,7 +119,9 @@ async def create_item(
                 "name": db_item.name,
                 "description": db_item.description,
                 "box": box,
-                "workspace": workspace
+                "workspace": workspace,
+                "box_id": item.box_id,
+                "workspace_id": item.workspace_id
             })
         except Exception as weaviate_error:
             db.rollback()
@@ -213,7 +215,7 @@ async def update_item(item_id: int, item: ItemPUTSchema, db: Session = Depends(g
             raise HTTPException(status_code=404, detail="Item not found")
         
         # Update the item in the database
-        for key, value in item.model_dump(exclude={'image'}).items():
+        for key, value in item.model_dump(exclude={'image', 'box_id', 'workspace_id'}).items():
             if value is not None:
                 setattr(db_item, key, value)
 
