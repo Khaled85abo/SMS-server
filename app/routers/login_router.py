@@ -38,7 +38,7 @@ def deactivate_user(user_id: int, db: Session = Depends(get_db)):
     return {"message": "User deactivated successfully"}
 
 
-@router.post("/")
+@router.post("")
 async def login_for_access_token(
     credentials: UserLoginSchema, db: Session = Depends(get_db)
 ) -> dict:

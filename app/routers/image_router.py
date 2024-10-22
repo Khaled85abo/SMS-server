@@ -17,7 +17,7 @@ IMAGEDIR = "static/media/images/"
 router = APIRouter()
 
 
-@router.post("/", status_code=201)
+@router.post("", status_code=201)
 async def upload_image(file: UploadFile,  user_id: Annotated[int, Depends(get_user_id)]):
 
     accepted_img_extensions = ['jpg', 'jpeg', 'bmp', 'webp', 'png']

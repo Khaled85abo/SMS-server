@@ -39,7 +39,7 @@ pytesseract.pytesseract.tesseract_cmd = tesseract_path
 model_small = YOLO('yolov8s.pt')
 
 
-@router.post("/detect/")
+@router.post("/detect")
 async def detect_objects(file: UploadFile = File(...), model = model):
     try:
         contents = await file.read()
@@ -118,13 +118,13 @@ async def detect_objects(file: UploadFile = File(...), model = model):
         logger.error(f"Error in detect_objects: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/detect-8x-img/")
+@router.post("/detect-8x-img")
 async def detect_objects_8x(file: UploadFile = File(...)):
     return await detect_objects_img(file, model=model_8x)
         
 
 
-@router.post("/detect-img/")
+@router.post("/detect-img")
 async def detect_objects_img(file: UploadFile = File(...), model = model):
     try:
         contents = await file.read()
@@ -193,7 +193,7 @@ async def detect_objects_img(file: UploadFile = File(...), model = model):
 # Initialize the OCR reader with the custom model directory
 reader = easyocr.Reader(['en'], model_storage_directory=MODEL_DIR, download_enabled=True)
 
-@router.post("/ocr/")
+@router.post("/ocr")
 async def perform_ocr(file: UploadFile = File(...), line_level: bool = False):
     try:
         contents = await file.read()
@@ -227,7 +227,7 @@ async def perform_ocr(file: UploadFile = File(...), line_level: bool = False):
         logger.error(f"Error in perform_ocr: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/ocr-light/")
+@router.post("/ocr-light")
 async def perform_ocr_light(file: UploadFile = File(...)):
     try:
         contents = await file.read()
@@ -248,7 +248,7 @@ print(f"EasyOCR models are stored in: {MODEL_DIR}")
 # Print the model download location
 print(f"EasyOCR models are stored in: {MODEL_DIR}")
 
-@router.post("/classify/")
+@router.post("/classify")
 async def classify_small_objects(file: UploadFile = File(...)):
     try:
         contents = await file.read()
@@ -323,7 +323,7 @@ async def classify_small_objects(file: UploadFile = File(...)):
         logger.error(f"Error in classify_small_objects: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/detect-box-name/")
+@router.post("/detect-box-name")
 async def detect_box_names(
     file: UploadFile = File(...),
     min_size: int = 20,
