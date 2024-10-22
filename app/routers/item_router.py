@@ -66,7 +66,7 @@ router = APIRouter()
 #     db.refresh(db_item)
 #     return db_item
 
-@router.post("/", response_model=ItemOutSchema)
+@router.post("", response_model=ItemOutSchema)
 async def create_item(
     item: ItemPOSTSchema, 
     user_id: Annotated[int, Depends(get_user_id)],
@@ -166,7 +166,7 @@ async def create_item(
     
 #     return items_with_images
 
-@router.get("/")
+@router.get("")
 async def get_items( db: Session = Depends(get_db)):
     items = db.query(Item).options(joinedload(Item.images), joinedload(Item.box).joinedload(Box.work_space)).all()
     

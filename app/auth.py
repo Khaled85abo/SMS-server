@@ -13,7 +13,7 @@ from pydantic import BaseModel
 # openssl rand -hex 32
 SECRET_KEY = "09d25e094faa6ca2556c81816644vdf31vdfdf7099f6f0f4caa6hkjsdfd8d3e7"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 20000
+ACCESS_TOKEN_EXPIRE_MINUTES = 99999999
 
 router = APIRouter()
 

@@ -19,7 +19,7 @@ router = APIRouter()
 
 templates = Jinja2Templates(directory="./app/templates")
 
-@router.post("/", status_code=201)
+@router.post("", status_code=201)
 async def create_user( new_user: UserSchema,background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> UserOutSchema:
     try:
         hashed_password= get_password_hash(new_user.password)
@@ -43,7 +43,7 @@ async def create_user( new_user: UserSchema,background_tasks: BackgroundTasks, d
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/", status_code=200)
+@router.get("", status_code=200)
 def list_users(db: Session = Depends(get_db)):
     """
     Fetches all users

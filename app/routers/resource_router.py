@@ -15,7 +15,7 @@ UPLOAD_DIRECTORY = "resources/uploads"
 
 from fastapi import Form
 
-@router.post("/", response_model=ResourceSchema)
+@router.post("", response_model=ResourceSchema)
 async def create_resource(
     resource: str = Form(...),
     file: UploadFile = File(...),
@@ -58,7 +58,7 @@ async def create_resource(
 
     return db_resource
 
-@router.get("/", response_model=List[ResourceSchema])
+@router.get("", response_model=List[ResourceSchema])
 async def get_resources(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_user_id)

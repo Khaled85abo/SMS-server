@@ -26,7 +26,7 @@ origins = [
     "http://192.168.1.186:5173",
     "https://fascinating-lollipop-4279f7.netlify.app"
 ]
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan,  redirect_slashes=False)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +35,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+   
 )
 
 app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)

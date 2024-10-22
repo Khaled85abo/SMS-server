@@ -47,7 +47,7 @@ def get_workspaces_with_roles(db: Session, user_id: int, workspace_id: Optional[
 #     return db_workspace
 
 # @router.post("/", response_model=WorkSpaceOutSchema)
-@router.post("/")
+@router.post("")
 async def create_workspace(
     workspace: WorkSpaceSchema,
     db: Session = Depends(get_db),
@@ -71,7 +71,7 @@ async def create_workspace(
 #     workspaces = db.query(WorkSpace).join(UserWorkSpace).filter(UserWorkSpace.user_id == user_id).offset(skip).limit(limit).all()
 #     return workspaces
 
-@router.get("/", response_model=List[WorkSpaceOutSchema])
+@router.get("", response_model=List[WorkSpaceOutSchema])
 async def get_all_workspaces(
     skip: int = 0,
     limit: int = 100,

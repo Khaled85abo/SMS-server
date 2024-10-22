@@ -6,7 +6,7 @@ from app.database.schemas.schemas import BoxSchema, BoxOutSchema, BoxWithItemsAn
 
 router = APIRouter()
 
-@router.post("/", response_model=BoxOutSchema)
+@router.post("", response_model=BoxOutSchema)
 async def create_box(box: BoxSchema, db: Session = Depends(get_db)):
     db_box = Box(**box.model_dump(exclude={"items"}))
     db.add(db_box)
@@ -14,7 +14,7 @@ async def create_box(box: BoxSchema, db: Session = Depends(get_db)):
     db.refresh(db_box)
     return db_box
 
-@router.get("/", response_model=list[BoxWithItemsAndImagesSchema])
+@router.get("", response_model=list[BoxWithItemsAndImagesSchema])
 async def read_boxes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     boxes = db.query(Box).options(
         joinedload(Box.items).joinedload(Item.images)
