@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from app.database.schemas.schemas import ResourceCreateSchema, ResourceSchema, ResourceUpdateSchema
+from app.database.schemas.schemas import ResourceCreateSchema, ResourceSchema, ResourceUpdateSchema, ResourceProcessingSchema
 from app.database.models.models import Resource, WorkSpace, User
 from app.db_setup import get_db
 from app.auth import get_user_id, get_user
@@ -8,6 +8,7 @@ from typing import List
 import os
 import shutil
 from datetime import datetime
+from app.tasks.resource_processing import process_resource_task
 
 router = APIRouter()
 
@@ -20,8 +21,7 @@ async def create_resource(
     resource: str = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
-    background_tasks: BackgroundTasks
+    user_id: int = Depends(get_user_id)
 ):
     # Parse the JSON string into a ResourceCreateSchema object
     resource_data = ResourceCreateSchema.model_validate_json(resource)
@@ -39,6 +39,18 @@ async def create_resource(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    # Determine the resource type based on content_type
+    if file.content_type.startswith('application/pdf'):
+        resource_type = 'pdf'
+    elif file.content_type.startswith('image/'):
+        resource_type = 'image'
+    elif file.content_type.startswith('video/'):
+        resource_type = 'video'
+    elif file.content_type.startswith('text/'):
+        resource_type = 'text'
+    else:
+        resource_type = 'unknown'
+
     # Create resource in database
     db_resource = Resource(
         name=resource_data.name,
@@ -47,7 +59,7 @@ async def create_resource(
         status="pending",  # Set initial status to pending
         work_space_id=resource_data.work_space_id,
         user_id=user_id,
-        resource_type=file.content_type,
+        resource_type=resource_type,
         file_path=file_path,
         file_size=os.path.getsize(file_path),
         file_extension=os.path.splitext(file.filename)[1],
@@ -56,9 +68,10 @@ async def create_resource(
     db.add(db_resource)
     db.commit()
     db.refresh(db_resource)
-
-    # Add processing task to background tasks
-    background_tasks.add_task(process_resource_task, db_resource.id)
+    print(f"\033[94mResource {db_resource.id} created with type {resource_type}\033[0m")
+    # Call the Celery task
+    process_resource_task.delay(db_resource.id)
+    print(f"\033[92mCelery task called for resource {db_resource.id}\033[0m")
 
     return db_resource
 
@@ -129,4 +142,3 @@ async def delete_resource(
     db.commit()
 
     return {"detail": "Resource deleted"}
-

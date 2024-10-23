@@ -3,6 +3,8 @@ from typing import Optional, List
 from datetime import datetime
 
 
+
+
 class ResourceSchema(BaseModel):
     id: int
     name: str = Field(..., description="The name of the resource")
@@ -18,6 +20,9 @@ class ResourceSchema(BaseModel):
     created_date: datetime
     updated_date: Optional[datetime]
 
+class ResourceProcessingSchema(ResourceSchema):
+    workspace: str = Field(..., description="The workspace of the resource")
+    
 class ResourceCreateSchema(BaseModel):
     name: str = Field(..., description="The name of the resource")
     description: Optional[str] = Field(None, description="The description of the resource")
