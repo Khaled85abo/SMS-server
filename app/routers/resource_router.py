@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.database.schemas.schemas import ResourceCreateSchema, ResourceSchema, ResourceUpdateSchema, ResourceProcessingSchema
 from app.database.models.models import Resource, WorkSpace, User
@@ -9,12 +9,11 @@ import os
 import shutil
 from datetime import datetime
 from app.tasks.resource_processing import process_resource_task
+from app.celery_app import celery_app
 
 router = APIRouter()
 
 UPLOAD_DIRECTORY = "resources/uploads"
-
-from fastapi import Form
 
 @router.post("", response_model=ResourceSchema)
 async def create_resource(
@@ -25,6 +24,7 @@ async def create_resource(
 ):
     # Parse the JSON string into a ResourceCreateSchema object
     resource_data = ResourceCreateSchema.model_validate_json(resource)
+    
     # Get the workspace
     workspace = db.query(WorkSpace).filter(WorkSpace.id == resource_data.work_space_id).first()
     if not workspace:
@@ -69,9 +69,34 @@ async def create_resource(
     db.commit()
     db.refresh(db_resource)
     print(f"\033[94mResource {db_resource.id} created with type {resource_type}\033[0m")
+    
+
+    # Prepare data for Celery task
+    resource_data_for_task= { 
+        "id": db_resource.id,
+        "name": db_resource.name,
+        "description": db_resource.description,
+        "file_type": db_resource.resource_type,
+        "file_path": db_resource.file_path,
+        "file_size": db_resource.file_size,
+        "file_extension": db_resource.file_extension,
+        "workspace_id": workspace.id,
+        "workspace": workspace.name,
+        "user_id": user_id,
+        "tags": db_resource.tags,
+        "created_date": str(db_resource.created_date),
+        # Add any other fields you need for Weaviate embeddings
+    }
+
     # Call the Celery task
-    process_resource_task.delay(db_resource.id)
-    print(f"\033[92mCelery task called for resource {db_resource.id}\033[0m")
+    try:
+        task = process_resource_task.delay(resource_data_for_task)
+        print(f"\033[92mCelery task {task.id} called for resource {db_resource.id}\033[0m")
+    except Exception as e:
+        print(f"\033[91mFailed to queue Celery task: {str(e)}\033[0m")
+        db_resource.status = "error"
+        db_resource.error_message = "Failed to queue processing task. Please try again later."
+        db.commit()
 
     return db_resource
 
