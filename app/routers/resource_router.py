@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database.schemas.schemas import ResourceCreateSchema, ResourceSchema, ResourceUpdateSchema
 from app.database.models.models import Resource, WorkSpace, User
@@ -20,7 +20,8 @@ async def create_resource(
     resource: str = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id)
+    user_id: int = Depends(get_user_id),
+    background_tasks: BackgroundTasks
 ):
     # Parse the JSON string into a ResourceCreateSchema object
     resource_data = ResourceCreateSchema.model_validate_json(resource)
@@ -43,7 +44,7 @@ async def create_resource(
         name=resource_data.name,
         description=resource_data.description,
         tags=resource_data.tags,
-        status="added",
+        status="pending",  # Set initial status to pending
         work_space_id=resource_data.work_space_id,
         user_id=user_id,
         resource_type=file.content_type,
@@ -55,6 +56,9 @@ async def create_resource(
     db.add(db_resource)
     db.commit()
     db.refresh(db_resource)
+
+    # Add processing task to background tasks
+    background_tasks.add_task(process_resource_task, db_resource.id)
 
     return db_resource
 
