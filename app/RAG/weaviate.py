@@ -32,7 +32,7 @@ client = weaviate.connect_to_weaviate_cloud(
 
 
 async def init_weaviate():
-    # await create_weaviate_manual_collection()
+    # await create_weaviate_resouce_collection()
     await create_weaviate_item_collection()
 
 
@@ -60,8 +60,8 @@ async def init_weaviate():
 def get_items_collection():
     return client.collections.get("Item")
 
-def get_manuals_collection():
-    return client.collections.get("Manual")
+def get_resouces_collection():
+    return client.collections.get("Resource")
 
 async def create_weaviate_resource_collection():
     try:
@@ -71,7 +71,7 @@ async def create_weaviate_resource_collection():
         sources = client.collections.create(
             name="Resource",
             properties=[
-                wc.Property(name="resource_id", data_type=wc.DataType.TEXT, skip_vectorization=True),
+                wc.Property(name="resource_id", data_type=wc.DataType.INT, skip_vectorization=True),
                 wc.Property(name="content", data_type=wc.DataType.TEXT),
                 wc.Property(name="workspace", data_type=wc.DataType.TEXT, skip_vectorization=True),
                 wc.Property(name="tags", data_type=wc.DataType.TEXT, skip_vectorization=True),
@@ -95,7 +95,6 @@ async def create_weaviate_resource_collection():
             ),
         )
         print(sources.config.get(simple=False))
-        # await insert_manuals_to_weaviate(sources_collection=sources)
 
 async def create_weaviate_item_collection():
     # Check if 'Item' class exists
@@ -126,6 +125,20 @@ async def create_weaviate_item_collection():
         )
         # await insert_items_to_weaviate(items_collection=items)
 
+def find_resource_uuid(collection, db_id):
+    results = collection.query.fetch_objects(
+        filters=Filter.by_property("resource_id").equal(db_id)
+    )
+    if len(results.objects) > 0:
+        print(results)
+        result = results.objects
+        # If we found a matching object, update it
+        uuid = result[0].uuid
+        print(f"UUID for {db_id}: {uuid}")
+        return uuid
+    else:
+        print(f"No data found for resource_id: {db_id}")
+        return None
 
 
 def find_item_uuid(collection, db_id):
@@ -198,16 +211,16 @@ def serialize_items(response):
         results.append(item)
     return results
 
-def add_manual_to_weaviate(client, manual_id, content, type, workspace):
-    client.data_object.create(
-        data_object={
-            "manual_id": manual_id,
-            "content": content,
-            "type": type,
-            "workspace": workspace,
-        },
-        class_name="Manual",
-    )
+# def add_resouce_to_weaviate(client, resouce_id, content, type, workspace):
+#     client.data_object.create(
+#         data_object={
+#             "resouce_id": resouce_id,
+#             "content": content,
+#             "type": type,
+#             "workspace": workspace,
+#         },
+#         class_name="Resouce",
+#     )
 
 
 def search_items(workspace, query, type, limit=10):
