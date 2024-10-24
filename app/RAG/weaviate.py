@@ -177,6 +177,11 @@ def update_data(collection,uuid, properties):
 def delete_data(collection, uuid):
     collection.data.delete_by_id(uuid=uuid)
 
+def delete_many_by_id(collection, property, value):
+    collection.data.delete_many(
+        where=Filter.by_property(property).equal(value)
+    )
+
 
 def keyword_items_search(collection, keyword, workspace):
     response = collection.query.bm25(

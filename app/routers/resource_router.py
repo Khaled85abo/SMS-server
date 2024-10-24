@@ -10,6 +10,7 @@ import shutil
 from datetime import datetime
 from app.tasks.resource_processing import process_resource_task
 from app.celery_app import celery_app
+from app.RAG.weaviate import delete_many_by_id, get_resouces_collection
 
 router = APIRouter()
 
@@ -155,6 +156,9 @@ async def delete_resource(
     db: Session = Depends(get_db),
     user: User = Depends(get_user)
 ):
+    # Delete the resource from weaviate
+    resource_collection = get_resouces_collection()
+    delete_many_by_id(resource_collection, "resource_id", resource_id)
     db_resource = db.query(Resource).filter(Resource.id == resource_id).first()
     if not db_resource:
         raise HTTPException(status_code=404, detail="Resource not found")
@@ -167,3 +171,7 @@ async def delete_resource(
     db.commit()
 
     return {"detail": "Resource deleted"}
+
+
+
+
