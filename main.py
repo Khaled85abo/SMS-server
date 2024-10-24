@@ -26,6 +26,7 @@ origins = [
     "http://192.168.1.186:5173",
     "https://khaledabo.com:81",
     "https://steady-moxie-4e7756.netlify.app",
+    "https://dreamy-empanada-b8efec.netlify.app",
     "https://dreamy-empanada-b8efec.netlify.app"
 ]
 app = FastAPI(lifespan=lifespan,  redirect_slashes=False)

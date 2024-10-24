@@ -43,10 +43,9 @@ def process_image(image_resource:ResourceProcessingSchema):
   response = llm.invoke(prompt)
   try:
     description_array = json.loads(response.content)
-    try:
-       resouce_collection = get_resouces_collection()
-       with resouce_collection.batch as batch:
-          for description in description_array:
+    resouce_collection = get_resouces_collection()
+    with resouce_collection.batch as batch:
+        for description in description_array:
              batch.add_object({
                         "resource_id": image_resource.id,
                         "content": description,
@@ -58,9 +57,8 @@ def process_image(image_resource:ResourceProcessingSchema):
                         "file_name": image_resource.name,
                         "resource_type": image_resource.resource_type,
                         }
-             )
-    except Exception as e:
-       print(e)
+            )
+
 
   except json.JSONDecodeError:
     description_array = [response.content]

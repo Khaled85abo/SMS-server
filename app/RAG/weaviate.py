@@ -81,6 +81,7 @@ async def create_weaviate_resource_collection():
                 wc.Property(name="file_name", data_type=wc.DataType.TEXT, skip_vectorization=True),
                 wc.Property(name="start_offset", data_type=wc.DataType.INT, skip_vectorization=True),
                 wc.Property(name="end_offset", data_type=wc.DataType.INT, skip_vectorization=True),
+                wc.Property(name="page_number", data_type=wc.DataType.INT, skip_vectorization=True),
                 wc.Property(name="resource_type", data_type=wc.DataType.TEXT, skip_vectorization=True),
                 wc.Property(name="timestamp", data_type=wc.DataType.FLOAT, skip_vectorization=True),  # For audio/video
                 wc.Property(name="paragraph_number", data_type=wc.DataType.INT, skip_vectorization=True),

@@ -1,28 +1,13 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 from app.database.schemas.schemas import ResourceProcessingSchema
-from app.RAG.weaviate import client
+from app.RAG.weaviate import get_resouces_collection
 from app.database.models.models import Resource
 from sqlalchemy.orm import Session
 import os
 
-# text_path = os.path.join(input_path, "state_of_the_union.txt")
 
-# # Read the file content
-# with open(text_path, 'r', encoding='utf-8') as file:
-#     text_content = file.read()
-
-# # Create a Document object
-# document = Document(page_content=text_content)
-
-# text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=4)
-# docs = text_splitter.split_documents([document])
-# print(docs)
-# for doc in docs:
-#   print(doc.page_content)
-
-
-def process_text(resource: ResourceProcessingSchema, db: Session):
+def process_text(resource: ResourceProcessingSchema):
     # Read the file content
     with open(resource.file_path, 'r', encoding='utf-8') as file:
         text_content = file.read()
@@ -35,7 +20,7 @@ def process_text(resource: ResourceProcessingSchema, db: Session):
     docs = text_splitter.split_documents([document])
 
     # Get the Resources collection
-    resources_collection = client.collections.get("Resource")
+    resources_collection = get_resouces_collection()
 
     # Prepare batch object
     with resources_collection.batch.dynamic() as batch:
@@ -56,10 +41,4 @@ def process_text(resource: ResourceProcessingSchema, db: Session):
             }
             batch.add_object(properties=properties)
 
-    # Update resource status in the database
-    db_resource = db.query(Resource).filter(Resource.id == resource.id).first()
-    if db_resource:
-        db_resource.status = "processed"
-        db.commit()
 
-    return len(docs)  # Return the number of chunks processed
